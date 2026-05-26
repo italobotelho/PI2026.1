@@ -11,15 +11,16 @@ const CORES_SEXO = ['#06b6d4', '#f43f5e', '#8b5cf6'];
 const COR_BARRAS = '#10b981';
 const COR_LINHA = '#3b82f6';
 
-export default function DashboardCharts() {
+export default function DashboardCharts({ doenca }: { doenca: string }) {
   const [dadosTemporais, setDadosTemporais] = useState<any[]>([]);
   const [dadosDemograficos, setDadosDemograficos] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
-      api.get('/dashboard/temporal'),
-      api.get('/dashboard/demografia')
+      api.get('/dashboard/temporal', { params: { doenca } }),
+      api.get('/dashboard/demografia', { params: { doenca } })
     ]).then(([resTemporal, resDemografia]) => {
       
       const temporalFormatado = resTemporal.data.map((item: any) => ({
@@ -27,32 +28,30 @@ export default function DashboardCharts() {
         data_formatada: `${String(item.mes).padStart(2, '0')}/${item.ano}`,
       }));
 
-      // Injetamos a cor diretamente nos dados para evitar o uso do componente <Cell>
-      const sexoFormatado = resDemografia.data.sexo.map((item: any, index: number) => ({
+      const sexoFormatado = resDemografia.data?.sexo?.map((item: any, index: number) => ({
         ...item,
         fill: CORES_SEXO[index % CORES_SEXO.length]
-      }));
+      })) || [];
 
       setDadosTemporais(temporalFormatado);
       setDadosDemograficos({
         ...resDemografia.data,
-        sexo: sexoFormatado // Usamos o array já com as cores embutidas
+        sexo: sexoFormatado
       });
       setLoading(false);
     }).catch(error => {
       console.error("Erro ao carregar gráficos:", error);
       setLoading(false);
     });
-  }, []);
+  }, [doenca]);
 
-  if (loading) return null;
+  if (loading) return <div className="text-slate-500 text-center p-10 animate-pulse mt-8">A atualizar gráficos...</div>;
+  if (dadosTemporais.length === 0) return <div className="text-slate-500 text-center p-10 mt-8">Sem dados para este filtro.</div>;
 
   const tooltipStyle = { backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' };
 
   return (
     <div className="w-full max-w-6xl mt-8 space-y-8">
-      
-      {/* Gráfico Temporal */}
       <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
         <h3 className="text-lg font-semibold text-slate-200 mb-6">Evolução Temporal de Casos</h3>
         <div className="h-[300px] w-full">
@@ -63,23 +62,13 @@ export default function DashboardCharts() {
               <YAxis stroke="#94a3b8" />
               <Tooltip contentStyle={tooltipStyle} />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="total_casos" 
-                name="Total de Notificações" 
-                stroke={COR_LINHA} 
-                strokeWidth={3} 
-                dot={{ r: 3, fill: COR_LINHA }} 
-                activeDot={{ r: 6 }} 
-              />
+              <Line type="monotone" dataKey="total_casos" name="Total de Notificações" stroke={COR_LINHA} strokeWidth={3} dot={{ r: 3, fill: COR_LINHA }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Gráfico de Barras: Faixa Etária */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
           <h3 className="text-lg font-semibold text-slate-200 mb-6">Casos por Faixa Etária</h3>
           <div className="h-[300px] w-full">
@@ -95,32 +84,18 @@ export default function DashboardCharts() {
           </div>
         </div>
 
-        {/* Gráfico de Pizza: Sexo */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
           <h3 className="text-lg font-semibold text-slate-200 mb-6">Distribuição por Sexo</h3>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={dadosDemograficos?.sexo}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="total_casos"
-                  nameKey="sexo"
-                  /* Corrigimos o 'sexo' para 'name' e demos fallback ao 'percent' com || 0 */
-                  label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
-                />
-                {/* Removemos os filhos <Cell> porque a cor já vem dentro dos dados! */}
+                <Pie data={dadosDemograficos?.sexo} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="total_casos" nameKey="sexo" label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
-
       </div>
     </div>
   );
