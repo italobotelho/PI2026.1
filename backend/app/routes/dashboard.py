@@ -41,3 +41,25 @@ async def get_dados_demograficos(doenca: str = None):
         "sexo": sexo,
         "letalidade": letalidade
     }
+
+@router.get("/mapas/risco")
+async def get_mapa_risco():
+    """Retorna os polígonos de risco de inundação em formato GeoJSON (padrão de mapas)."""
+    # Procura todos os polígonos, excluindo o ObjectId interno do MongoDB
+    features = await db.risco_inundacao.find({}, {"_id": 0}).to_list(length=None)
+    
+    # O Leaflet exige que os dados cheguem empacotados numa "FeatureCollection"
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+@router.get("/mapas/vulnerabilidade")
+async def get_mapa_vulnerabilidade():
+    """Retorna os polígonos de vulnerabilidade habitacional em formato GeoJSON."""
+    features = await db.vulnerabilidade_habitacional.find({}, {"_id": 0}).to_list(length=None)
+    
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }

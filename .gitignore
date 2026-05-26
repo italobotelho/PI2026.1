@@ -11,3 +11,6 @@
 *.dbf
 *.prj
 *.cpg
+
+__pycache__/
+*.pyc
