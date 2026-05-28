@@ -9,12 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@nivo/core": "^0.99.0",
+    "@nivo/sunburst": "^0.99.0",
+    "@types/leaflet.heat": "^0.2.5",
     "axios": "^1.16.1",
     "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-force-graph-2d": "^1.29.1",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.1"
   },
