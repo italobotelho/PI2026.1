@@ -12,6 +12,7 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
   const [loading, setLoading] = useState(true);
   const [mesAtual, setMesAtual] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [maximos, setMaximos] = useState({ casos: 150, precip: 400 });
 
   useEffect(() => {
     setLoading(true);
@@ -19,19 +20,34 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
     api.get('/dashboard/temporal', { params: { doenca } })
       .then(res => {
         // Como a API temporal traz geral, vamos mockar a quebra por "bairros" (Bolhas) para o scatter de correlação
-        const meses = res.data;
+        const meses = res.data.sort((a: any, b: any) => {
+          if (a.ano !== b.ano) return a.ano - b.ano;
+          return a.mes - b.mes;
+        });
+
+        let globalMaxCasos = 0;
+        let globalMaxPrecip = 0;
+
         const bairrosMockados = meses.map((mes: any) => {
-          // Para cada mês, geramos de 5 a 10 bairros com dados
-          return Array.from({ length: 8 }).map((_, i) => ({
-            nome_bairro: `Região ${i + 1}`,
-            mes_id: `${String(mes.mes).padStart(2, '0')}/${mes.ano}`,
-            precipitacao: Math.random() * 200 + 50 + (mes.mes === 1 || mes.mes === 2 ? 150 : 0), // Mais chuva no verão
-            casos: Math.max(0, Math.random() * 50 + (mes.total_casos / 100)),
-            populacao: Math.random() * 50000 + 10000,
-            vulnerabilidade: Math.floor(Math.random() * 3) // 0: baixa, 1: media, 2: alta
-          }));
+          return Array.from({ length: 8 }).map((_, i) => {
+            const precipitacao = (mes.precipitacao_total || 0) * (Math.random() * 0.4 + 0.8);
+            const casos = Math.max(0, (mes.total_casos / 8) * (Math.random() * 0.5 + 0.75));
+            
+            if (casos > globalMaxCasos) globalMaxCasos = casos;
+            if (precipitacao > globalMaxPrecip) globalMaxPrecip = precipitacao;
+
+            return {
+              nome_bairro: `Região ${i + 1}`,
+              mes_id: `${String(mes.mes).padStart(2, '0')}/${mes.ano}`,
+              precipitacao,
+              casos,
+              populacao: Math.random() * 50000 + 10000,
+              vulnerabilidade: Math.floor(Math.random() * 3)
+            };
+          });
         });
         
+        setMaximos({ casos: globalMaxCasos, precip: globalMaxPrecip });
         setDados(bairrosMockados);
         setLoading(false);
       })
@@ -70,6 +86,30 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
 
   const dadosExibidos = dados.length > 0 ? dados[mesAtual] : [];
   const rotuloMes = dadosExibidos.length > 0 ? dadosExibidos[0].mes_id : '';
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const vulLabel = data.vulnerabilidade === 0 ? 'Baixa' : data.vulnerabilidade === 1 ? 'Média' : 'Alta';
+      const vulColor = coresVulnerabilidade[data.vulnerabilidade];
+
+      return (
+        <div className="bg-slate-900/95 border border-slate-700 p-4 rounded-xl shadow-2xl backdrop-blur-md">
+          <p className="text-white font-bold text-lg mb-1 border-b border-slate-700 pb-1">{data.nome_bairro}</p>
+          <div className="space-y-1 mt-2">
+            <p className="text-rose-400 text-sm font-semibold">Casos: <span className="text-slate-200 font-normal">{Math.round(data.casos)}</span></p>
+            <p className="text-sky-400 text-sm font-semibold">Chuva: <span className="text-slate-200 font-normal">{Math.round(data.precipitacao)} mm</span></p>
+            <p className="text-emerald-400 text-sm font-semibold">População: <span className="text-slate-200 font-normal">{Math.round(data.populacao).toLocaleString('pt-BR')}</span></p>
+            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: vulColor }}></span>
+              <span className="text-xs text-slate-300">Vulnerabilidade {vulLabel}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className={cardClass}>
@@ -111,14 +151,12 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis type="number" dataKey="precipitacao" name="Chuva (mm)" stroke="#94a3b8" tick={{fontSize: 12}} domain={[0, 400]} />
-              <YAxis type="number" dataKey="casos" name="Casos" stroke="#94a3b8" tick={{fontSize: 12}} domain={[0, 150]} />
-              <ZAxis type="number" dataKey="populacao" range={[50, 1000]} name="População" />
+              <XAxis type="number" dataKey="precipitacao" name="Chuva (mm)" stroke="#94a3b8" tick={{fontSize: 12}} domain={[0, maximos.precip > 0 ? maximos.precip : 400]} />
+              <YAxis type="number" dataKey="casos" name="Casos" stroke="#94a3b8" tick={{fontSize: 12}} domain={[0, maximos.casos > 0 ? maximos.casos : 150]} />
+              <ZAxis type="number" dataKey="populacao" range={[100, 3000]} name="População" />
               <Tooltip 
                 cursor={{ strokeDasharray: '3 3' }} 
-                contentStyle={tooltipStyle}
-                formatter={(value, name) => [Math.round(Number(value)), name]}
-                labelFormatter={() => ''}
+                content={<CustomTooltip />}
               />
               <Scatter name="Bairros" data={dadosExibidos} animationDuration={800}>
                 {dadosExibidos.map((entry: any, index: number) => (

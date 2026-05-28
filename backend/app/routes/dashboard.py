@@ -64,3 +64,15 @@ async def get_mapa_risco():
 async def get_mapa_vulnerabilidade():
     features = await db.vulnerabilidade_habitacional.find({}, {"_id": 0}).to_list(length=None)
     return {"type": "FeatureCollection", "features": features}
+
+@router.get("/hospitais")
+async def get_hospitais(doenca: str = None):
+    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    dados = await db.agg_casos_por_hospital.find(filtro, {"_id": 0}).to_list(length=None)
+    return dados
+
+@router.get("/mapas/casos")
+async def get_mapa_casos(doenca: str = None):
+    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    dados = await db.agg_mapa_casos.find(filtro, {"_id": 0}).to_list(length=None)
+    return dados

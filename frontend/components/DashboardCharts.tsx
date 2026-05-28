@@ -34,14 +34,41 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
           data_formatada: `${String(item.mes).padStart(2, '0')}/${item.ano}`,
         }));
 
-      const sexoFormatado = resDemografia.data?.sexo?.map((item: any, index: number) => ({
+      // Helper para agrupar e somar dados (resolve o problema de dados duplicados vindo da API)
+      const aggregateData = (data: any[] = [], key: string) => {
+        const grouped = data.reduce((acc: any, curr: any) => {
+          const k = curr[key];
+          if (!k) return acc;
+          if (!acc[k]) {
+            acc[k] = { [key]: k, total_casos: 0 };
+          }
+          acc[k].total_casos += Number(curr.total_casos) || 0;
+          return acc;
+        }, {});
+        return Object.values(grouped);
+      };
+
+      const faixaEtariaAgregada = aggregateData(resDemografia.data?.faixa_etaria, 'faixa_etaria')
+        .sort((a: any, b: any) => a.faixa_etaria.localeCompare(b.faixa_etaria)); // Ordenar alfabeticamente ('00 a 04' -> '80+')
+
+      const sexoAgregado = aggregateData(resDemografia.data?.sexo, 'sexo');
+      
+      const SEXO_MAP: Record<string, string> = {
+        'M': 'Masculino',
+        'F': 'Feminino',
+        'I': 'Indeterminado'
+      };
+
+      const sexoFormatado = sexoAgregado.map((item: any, index: number) => ({
         ...item,
+        sexo_nome: SEXO_MAP[item.sexo] || item.sexo,
         fill: CORES_SEXO[index % CORES_SEXO.length]
-      })) || [];
+      }));
 
       setDadosTemporais(temporalFormatado);
       setDadosDemograficos({
         ...resDemografia.data,
+        faixa_etaria: faixaEtariaAgregada,
         sexo: sexoFormatado
       });
       setLoading(false);
@@ -146,7 +173,7 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={dadosDemograficos?.sexo} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} dataKey="total_casos" nameKey="sexo" label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`} stroke="none">
+                <Pie data={dadosDemograficos?.sexo} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} dataKey="total_casos" nameKey="sexo_nome" label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`} stroke="none">
                   {dadosDemograficos?.sexo?.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} style={{ filter: `drop-shadow(0px 0px 8px ${entry.fill}60)` }} />
                   ))}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/app/services/api';
 import { 
-  ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+  ComposedChart, Line, Bar, Brush, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
 
 export default function TimeLagChart({ doenca }: { doenca: string }) {
@@ -25,8 +25,9 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
           .map((item: any) => ({
             ...item,
             data_formatada: `${String(item.mes).padStart(2, '0')}/${item.ano}`,
-            precipitacao: Math.random() * 200 + 50, // Mock caso a API não traga
-            temperatura: Math.random() * 15 + 15,
+            // Usar os dados reais vindos da agregação (agg_casos_clima_por_mes)
+            precipitacao: item.precipitacao_total || 0,
+            temperatura: item.temperatura_media || 0,
           }));
         setDados(formatado);
         setLoading(false);
@@ -91,12 +92,20 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
               <XAxis dataKey="data_formatada" stroke="#94a3b8" tick={{fontSize: 12}} minTickGap={30} />
               <YAxis yAxisId="left" stroke="#06b6d4" tick={{fontSize: 12}} orientation="left" />
               <YAxis yAxisId="right" stroke="#f43f5e" tick={{fontSize: 12}} orientation="right" />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ paddingTop: '20px' }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <Legend verticalAlign="top" height={36} />
               
-              <Bar yAxisId="left" dataKey="precipitacao" name="Chuva (mm)" fill="url(#colorPrecip)" radius={[4, 4, 0, 0]} barSize={20} />
-              <Line yAxisId="left" type="monotone" dataKey="temperatura" name="Temp (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} />
-              <Line yAxisId="right" type="monotone" dataKey="casos_deslocados" name={`Casos (+${lagDias}d)`} stroke="#f43f5e" strokeWidth={4} dot={{ r: 4 }} activeDot={{ r: 7 }} />
+              <Bar yAxisId="left" dataKey="precipitacao" name="Chuva (mm)" fill="url(#colorPrecip)" radius={[4, 4, 0, 0]} barSize={8} opacity={0.7} />
+              <Line yAxisId="left" type="monotone" dataKey="temperatura" name="Temp (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              <Line yAxisId="right" type="monotone" dataKey="casos_deslocados" name={`Casos (+${lagDias}d)`} stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} />
+              
+              <Brush 
+                dataKey="data_formatada" 
+                height={30} 
+                stroke="#475569" 
+                fill="#0f172a"
+                tickFormatter={() => ''}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

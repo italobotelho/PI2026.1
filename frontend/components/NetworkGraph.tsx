@@ -14,27 +14,35 @@ export default function NetworkGraph({ doenca }: { doenca: string }) {
 
   useEffect(() => {
     setLoading(true);
-    // Simular busca de dados de rede
-    api.get('/dashboard/resumo', { params: { doenca } })
+    api.get('/dashboard/hospitais', { params: { doenca } })
       .then(res => {
-        // Mock de rede (Bairros -> Hospitais)
-        const nodes = [
-          { id: 'Hospital das Clínicas', group: 1, val: 20 },
-          { id: 'UPA Campo Grande', group: 1, val: 15 },
-          { id: 'Hospital PUC-Campinas', group: 1, val: 25 },
-          { id: 'Bairro Alto Vulnerabilidade A', group: 2, val: 5 },
-          { id: 'Bairro Alto Vulnerabilidade B', group: 2, val: 8 },
-          { id: 'Bairro Média Vulnerabilidade C', group: 3, val: 4 },
-          { id: 'Bairro Baixa Vulnerabilidade D', group: 4, val: 2 },
-        ];
+        const hospitais = res.data;
         
-        const links = [
-          { source: 'Bairro Alto Vulnerabilidade A', target: 'Hospital das Clínicas', value: 10 },
-          { source: 'Bairro Alto Vulnerabilidade B', target: 'Hospital PUC-Campinas', value: 15 },
-          { source: 'Bairro Média Vulnerabilidade C', target: 'UPA Campo Grande', value: 5 },
-          { source: 'Bairro Alto Vulnerabilidade A', target: 'UPA Campo Grande', value: 8 },
-          { source: 'Bairro Baixa Vulnerabilidade D', target: 'Hospital das Clínicas', value: 2 },
-        ];
+        // Hub and Spoke model: Central Node (Disease/Campinas) -> Hospitals
+        const centralNodeId = doenca || 'Campinas (Geral)';
+        const nodes: any[] = [{ id: centralNodeId, group: 0, val: 30 }]; // Root node
+        const links: any[] = [];
+        
+        hospitais.forEach((h: any, index: number) => {
+          // Apenas hospitais com nome definido e mais de 1 caso para não poluir
+          if (h.hospital && h.total_casos > 0) {
+            // Group 1 para hospitais com internações, Group 2 sem internações
+            const group = h.hospitalizacoes > 0 ? 1 : 2;
+            nodes.push({ 
+              id: h.hospital, 
+              group: group, 
+              val: Math.max(2, Math.min(20, h.total_casos / 10)), // Size scaling
+              casos: h.total_casos,
+              internacoes: h.hospitalizacoes
+            });
+            
+            links.push({
+              source: h.hospital,
+              target: centralNodeId,
+              value: Math.max(1, Math.min(10, h.total_casos / 50)) // Link width scaling
+            });
+          }
+        });
 
         setDados({ nodes, links });
         setLoading(false);
@@ -60,7 +68,10 @@ export default function NetworkGraph({ doenca }: { doenca: string }) {
           <ForceGraph2D
             ref={graphRef}
             graphData={dados}
-            nodeLabel="id"
+            nodeLabel={(node: any) => {
+              if (node.group === 0) return node.id;
+              return `${node.id} - Casos: ${node.casos} | Internações: ${node.internacoes}`;
+            }}
             nodeColor={(node: any) => {
               if (node.group === 1) return '#3b82f6'; // Hospitais = Azul
               if (node.group === 2) return '#e11d48'; // Bairro Alto = Vermelho
