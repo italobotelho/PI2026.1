@@ -30,8 +30,12 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
 
         const bairrosMockados = meses.map((mes: any) => {
           return Array.from({ length: 8 }).map((_, i) => {
-            const precipitacao = (mes.precipitacao_total || 0) * (Math.random() * 0.4 + 0.8);
-            const casos = Math.max(0, (mes.total_casos / 8) * (Math.random() * 0.5 + 0.75));
+            // Espalhamento maior para chuva (alguns bairros chovem muito mais que outros)
+            const precipitacao = (mes.precipitacao_total || 0) * (Math.random() * 0.8 + 0.4); 
+            
+            // Casos com variação drástica (para simular surtos localizados)
+            const pesoCasos = Math.pow(Math.random(), 2); // Pende para números menores, mas permite picos altos
+            const casos = Math.max(0, mes.total_casos * pesoCasos * 1.5);
             
             if (casos > globalMaxCasos) globalMaxCasos = casos;
             if (precipitacao > globalMaxPrecip) globalMaxPrecip = precipitacao;
@@ -118,7 +122,15 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h3 className="text-xl font-bold text-white tracking-tight">Evolução Sócio-Climática (Gapminder)</h3>
-          <p className="text-sm text-slate-400">Relação entre Chuva (X) x Casos (Y) por bairro. Bolhas maiores = Maior População. <span className="text-rose-400 font-semibold">Cor = Vulnerabilidade</span>.</p>
+          <p className="text-sm text-slate-400 mt-1">
+            Relação espacial e temporal entre volume de chuva e incidência de casos por bairro.
+          </p>
+          <div className="flex flex-wrap gap-4 mt-3 text-xs font-medium bg-slate-800/50 p-2.5 rounded-xl border border-slate-700/50 inline-flex items-center">
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span> Baixa Vuln.</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span> Média Vuln.</div>
+            <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(225,29,72,0.5)]"></span> Alta Vuln.</div>
+            <div className="flex items-center gap-1.5 ml-1 border-l border-slate-600 pl-3"><div className="w-4 h-4 rounded-full border-2 border-slate-400/50 flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-slate-400/50"></div></div> Tamanho = População</div>
+          </div>
         </div>
         <div className="text-4xl font-extrabold text-slate-700 opacity-50">{rotuloMes}</div>
       </div>
@@ -149,11 +161,29 @@ export default function CorrelationScatter({ doenca }: { doenca: string }) {
       ) : (
         <div className="h-[400px] w-full relative">
           <ResponsiveContainer width="100%" height="100%">
-            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-              <XAxis type="number" dataKey="precipitacao" name="Chuva (mm)" stroke="#94a3b8" tick={{fontSize: 12}} domain={[0, maximos.precip > 0 ? maximos.precip : 400]} />
-              <YAxis type="number" dataKey="casos" name="Casos" stroke="#94a3b8" tick={{fontSize: 12}} domain={[0, maximos.casos > 0 ? maximos.casos : 150]} />
-              <ZAxis type="number" dataKey="populacao" range={[100, 3000]} name="População" />
+            <ScatterChart margin={{ top: 20, right: 30, bottom: 30, left: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+              <XAxis 
+                type="number" 
+                dataKey="precipitacao" 
+                name="Chuva" 
+                stroke="#94a3b8" 
+                tick={{fontSize: 12}} 
+                tickFormatter={(value) => Math.round(value).toString()}
+                domain={[0, 'auto']} 
+                label={{ value: 'Volume de Chuva (mm)', position: 'insideBottom', offset: -15, fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
+              />
+              <YAxis 
+                type="number" 
+                dataKey="casos" 
+                name="Casos" 
+                stroke="#94a3b8" 
+                tick={{fontSize: 12}} 
+                tickFormatter={(value) => Math.round(value).toString()}
+                domain={[0, 'auto']} 
+                label={{ value: 'Quantidade de Casos', angle: -90, position: 'insideLeft', offset: 0, fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
+              />
+              <ZAxis type="number" dataKey="populacao" range={[100, 4000]} name="População" />
               <Tooltip 
                 cursor={{ strokeDasharray: '3 3' }} 
                 content={<CustomTooltip />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '@/app/services/api';
 import { 
   ComposedChart, Line, Bar, Brush, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
@@ -10,6 +10,9 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
   const [dados, setDados] = useState<any[]>([]);
   const [lagDias, setLagDias] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  
+  // Usamos useRef em vez de useState para não causar lag no gráfico ao arrastar o Brush
+  const brushPosRef = useRef<{start?: number, end?: number}>({});
 
   useEffect(() => {
     setLoading(true);
@@ -62,7 +65,7 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
       
       <div className="mb-6 flex flex-col md:flex-row items-start md:items-center gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
         <label className="text-sm font-semibold text-slate-300 whitespace-nowrap">
-          Deslocamento (Lag): <span className="text-cyan-400">{lagDias} dias</span>
+          Deslocamento Temporal (Lag): <span className="text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded ml-1">{lagDias} dias</span>
         </label>
         <input 
           type="range" 
@@ -73,7 +76,7 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
           onChange={(e) => setLagDias(parseInt(e.target.value))}
           className="w-full md:w-64 accent-cyan-500"
         />
-        <p className="text-xs text-slate-500 ml-auto hidden md:block">Arraste para encontrar a correlação exata.</p>
+        <p className="text-xs text-slate-500 ml-auto hidden md:block">Arraste para alinhar o clima com os picos de infecção.</p>
       </div>
 
       {loading ? (
@@ -81,23 +84,45 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
       ) : (
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={dadosComLag} margin={{ top: 5, right: 0, bottom: 5, left: 0 }}>
+            <ComposedChart data={dadosComLag} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
               <defs>
                 <linearGradient id="colorPrecip" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.8}/>
                   <stop offset="100%" stopColor="#06b6d4" stopOpacity={0.1}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} vertical={false} />
               <XAxis dataKey="data_formatada" stroke="#94a3b8" tick={{fontSize: 12}} minTickGap={30} />
-              <YAxis yAxisId="left" stroke="#06b6d4" tick={{fontSize: 12}} orientation="left" />
-              <YAxis yAxisId="right" stroke="#f43f5e" tick={{fontSize: 12}} orientation="right" />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-              <Legend verticalAlign="top" height={36} />
               
-              <Bar yAxisId="left" dataKey="precipitacao" name="Chuva (mm)" fill="url(#colorPrecip)" radius={[4, 4, 0, 0]} barSize={8} opacity={0.7} />
-              <Line yAxisId="left" type="monotone" dataKey="temperatura" name="Temp (°C)" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-              <Line yAxisId="right" type="monotone" dataKey="casos_deslocados" name={`Casos (+${lagDias}d)`} stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} />
+              <YAxis 
+                yAxisId="left" 
+                stroke="#06b6d4" 
+                tick={{fontSize: 12}} 
+                orientation="left" 
+              />
+              <YAxis 
+                yAxisId="right" 
+                stroke="#f43f5e" 
+                tick={{fontSize: 12}} 
+                orientation="right" 
+              />
+              {/* Eixo invisível para a temperatura não ser achatada pela escala da chuva (0-1400) */}
+              <YAxis yAxisId="temp" type="number" domain={[0, 45]} hide={true} />
+
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <Legend 
+                verticalAlign="top" 
+                height={36} 
+                wrapperStyle={{ paddingBottom: '20px' }} 
+                formatter={(value) => {
+                  const color = value.includes('Chuva') ? '#06b6d4' : (value.includes('Temp') ? '#f59e0b' : '#f43f5e');
+                  return <span style={{ color, fontWeight: 500 }}>{value}</span>;
+                }}
+              />
+              
+              <Bar yAxisId="left" dataKey="precipitacao" name="Volume de Chuva (mm)" fill="url(#colorPrecip)" radius={[4, 4, 0, 0]} barSize={8} opacity={0.7} />
+              <Line yAxisId="temp" type="monotone" dataKey="temperatura" name="Temperatura (°C)" stroke="#f59e0b" strokeWidth={2} opacity={0.5} dot={false} activeDot={{ r: 4 }} />
+              <Line yAxisId="right" type="monotone" dataKey="casos_deslocados" name={`Casos (Defasagem de ${lagDias} dias)`} stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} />
               
               <Brush 
                 dataKey="data_formatada" 
@@ -105,6 +130,13 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
                 stroke="#475569" 
                 fill="#0f172a"
                 tickFormatter={() => ''}
+                startIndex={brushPosRef.current.start}
+                endIndex={brushPosRef.current.end}
+                onChange={(e: any) => {
+                  if (e && typeof e.startIndex === 'number') {
+                    brushPosRef.current = { start: e.startIndex, end: e.endIndex };
+                  }
+                }}
               />
             </ComposedChart>
           </ResponsiveContainer>

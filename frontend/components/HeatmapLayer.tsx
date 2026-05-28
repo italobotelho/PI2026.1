@@ -21,11 +21,11 @@ export default function HeatmapLayer({ points }: HeatmapLayerProps) {
       blur: 15,
       maxZoom: 14,
       gradient: {
-        0.2: '#06b6d4', // Cyan
-        0.4: '#10b981', // Green
-        0.6: '#f59e0b', // Yellow
+        0.2: '#4c1d95', // Deep purple
+        0.4: '#9333ea', // Purple
+        0.6: '#db2777', // Pink
         0.8: '#f97316', // Orange
-        1.0: '#e11d48'  // Red
+        1.0: '#fef08a'  // Yellow hot
       }
     }).addTo(map);
 

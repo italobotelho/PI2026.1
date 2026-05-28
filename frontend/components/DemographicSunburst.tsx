@@ -15,7 +15,7 @@ export default function DemographicSunburst({ doenca }: { doenca: string }) {
       .then(res => {
         // Criamos uma estrutura hierárquica mockada a partir dos dados (Vulnerabilidade -> Doença -> Faixa Etária -> Sexo)
         // Como a API atual talvez não tenha exatamente essa árvore, geramos uma para mostrar o potencial do Sunburst.
-        const mockData = {
+          const mockData = {
           name: "Campinas",
           color: "hsl(210, 20%, 30%)",
           children: [
@@ -24,11 +24,11 @@ export default function DemographicSunburst({ doenca }: { doenca: string }) {
               color: "hsl(340, 70%, 50%)",
               children: [
                 {
-                  name: doenca || "Geral",
+                  name: `${doenca || "Geral"} (Alta)`,
                   color: "hsl(340, 60%, 60%)",
                   children: [
-                    { name: "Idosos", color: "hsl(340, 50%, 70%)", loc: Math.random() * 500 + 100 },
-                    { name: "Adultos", color: "hsl(340, 50%, 80%)", loc: Math.random() * 800 + 200 }
+                    { name: "Idosos (Alta)", color: "hsl(340, 50%, 70%)", loc: Math.random() * 500 + 100 },
+                    { name: "Adultos (Alta)", color: "hsl(340, 50%, 80%)", loc: Math.random() * 800 + 200 }
                   ]
                 }
               ]
@@ -38,11 +38,11 @@ export default function DemographicSunburst({ doenca }: { doenca: string }) {
               color: "hsl(30, 90%, 50%)",
               children: [
                 {
-                  name: doenca || "Geral",
+                  name: `${doenca || "Geral"} (Média)`,
                   color: "hsl(30, 80%, 60%)",
                   children: [
-                    { name: "Idosos", color: "hsl(30, 70%, 70%)", loc: Math.random() * 300 + 50 },
-                    { name: "Adultos", color: "hsl(30, 70%, 80%)", loc: Math.random() * 600 + 100 }
+                    { name: "Idosos (Média)", color: "hsl(30, 70%, 70%)", loc: Math.random() * 300 + 50 },
+                    { name: "Adultos (Média)", color: "hsl(30, 70%, 80%)", loc: Math.random() * 600 + 100 }
                   ]
                 }
               ]
@@ -52,11 +52,11 @@ export default function DemographicSunburst({ doenca }: { doenca: string }) {
               color: "hsl(160, 70%, 40%)",
               children: [
                 {
-                  name: doenca || "Geral",
+                  name: `${doenca || "Geral"} (Baixa)`,
                   color: "hsl(160, 60%, 50%)",
                   children: [
-                    { name: "Idosos", color: "hsl(160, 50%, 60%)", loc: Math.random() * 100 + 20 },
-                    { name: "Adultos", color: "hsl(160, 50%, 70%)", loc: Math.random() * 300 + 50 }
+                    { name: "Idosos (Baixa)", color: "hsl(160, 50%, 60%)", loc: Math.random() * 100 + 20 },
+                    { name: "Adultos (Baixa)", color: "hsl(160, 50%, 70%)", loc: Math.random() * 300 + 50 }
                   ]
                 }
               ]
@@ -91,11 +91,14 @@ export default function DemographicSunburst({ doenca }: { doenca: string }) {
             value="loc"
             cornerRadius={2}
             borderColor={{ theme: 'background' }}
-            colors={{ datum: 'color' }}
-            childColor={{ from: 'color', modifiers: [ [ 'brighter', 0.1 ] ] }}
+            colors={{ datum: 'data.color' }}
+            animate={false}
+            childColor={{ from: 'color', modifiers: [ [ 'brighter', 0.15 ] ] }}
+            borderWidth={2}
             enableArcLabels={true}
-            arcLabelsSkipAngle={10}
-            arcLabelsTextColor={{ from: 'color', modifiers: [ [ 'darker', 3 ] ] }}
+            arcLabel="id"
+            arcLabelsSkipAngle={12}
+            arcLabelsTextColor="#ffffff"
             tooltip={({ id, value, color }) => (
               <div className="bg-slate-800 text-white p-2 rounded shadow-lg text-sm border border-slate-700">
                 <strong style={{ color }}>{id}</strong>: {Math.round(value)} casos

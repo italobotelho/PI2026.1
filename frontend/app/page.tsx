@@ -101,7 +101,7 @@ export default function Home() {
 
         {activeTab === 'geo' && (
           <>
-            <DashboardMap />
+            <DashboardMap doenca={doencaSelecionada} />
             <DemographicSunburst doenca={doencaSelecionada} />
           </>
         )}

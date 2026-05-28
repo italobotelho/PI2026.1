@@ -1,7 +1,14 @@
+import asyncio
 from fastapi import APIRouter
 from app.database import db
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
+
+AGE_WEIGHTS = {
+    "00 a 04": 2, "05 a 09": 7, "10 a 14": 12, "15 a 19": 17,
+    "20 a 29": 25, "30 a 39": 35, "40 a 49": 45, "50 a 59": 55,
+    "60 a 69": 65, "70 a 79": 75, "80": 85
+}
 
 @router.get("/resumo")
 async def get_resumo_kpis(doenca: str = None):
@@ -14,33 +21,27 @@ async def get_resumo_kpis(doenca: str = None):
     if not doenca:
         resumo_casos = await db.agg_resumo_casos.find_one({}, {"_id": 0})
     else:
-        dados_temporais = await db.agg_casos_clima_por_mes.find(filtro, {"_id": 0}).to_list(length=None)
+        # Executa as 3 consultas no banco simultaneamente em vez de uma por vez
+        dados_temporais, dados_hospitais, dados_idade = await asyncio.gather(
+            db.agg_casos_clima_por_mes.find(filtro, {"_id": 0}).to_list(length=None),
+            db.agg_casos_por_hospital.find(filtro, {"_id": 0}).to_list(length=None),
+            db.agg_casos_por_faixa_etaria.find(filtro, {"_id": 0}).to_list(length=None)
+        )
+        
         total_casos_doenca = sum(item.get("total_casos", 0) for item in dados_temporais)
         
         # Hospitalizações e Unidades
-        dados_hospitais = await db.agg_casos_por_hospital.find(filtro, {"_id": 0}).to_list(length=None)
         total_hospitalizados = sum(h.get("hospitalizacoes", 0) for h in dados_hospitais)
-        total_unidades = len([h for h in dados_hospitais if h.get("total_casos", 0) > 0])
+        total_unidades = sum(1 for h in dados_hospitais if h.get("total_casos", 0) > 0)
         
         # Média de Idade (aproximada por faixa etária)
-        dados_idade = await db.agg_casos_por_faixa_etaria.find(filtro, {"_id": 0}).to_list(length=None)
         soma_idade = 0
         total_pessoas = 0
         for item in dados_idade:
             faixa = item.get("faixa_etaria", "")
             casos = item.get("total_casos", 0)
-            peso = None
-            if "00 a 04" in faixa: peso = 2
-            elif "05 a 09" in faixa: peso = 7
-            elif "10 a 14" in faixa: peso = 12
-            elif "15 a 19" in faixa: peso = 17
-            elif "20 a 29" in faixa: peso = 25
-            elif "30 a 39" in faixa: peso = 35
-            elif "40 a 49" in faixa: peso = 45
-            elif "50 a 59" in faixa: peso = 55
-            elif "60 a 69" in faixa: peso = 65
-            elif "70 a 79" in faixa: peso = 75
-            elif "80" in faixa: peso = 85
+            
+            peso = next((w for k, w in AGE_WEIGHTS.items() if k in faixa), None)
             if peso:
                 soma_idade += peso * casos
                 total_pessoas += casos
@@ -50,9 +51,8 @@ async def get_resumo_kpis(doenca: str = None):
         # Temperatura Média ponderada pelos meses de incidência
         soma_temp = sum(item.get("temperatura_media", 0) * item.get("total_casos", 0) for item in dados_temporais)
         if total_casos_doenca > 0 and any("temperatura_media" in i for i in dados_temporais):
-            media_temp = round(soma_temp / total_casos_doenca, 1)
             resumo_clima = dict(resumo_clima)
-            resumo_clima["media_temperatura"] = media_temp
+            resumo_clima["media_temperatura"] = round(soma_temp / total_casos_doenca, 1)
 
         resumo_casos = {
             "total_casos": total_casos_doenca,
@@ -68,18 +68,19 @@ async def get_resumo_kpis(doenca: str = None):
 
 @router.get("/temporal")
 async def get_dados_temporais(doenca: str = None):
-    # Aplicando o Regex Inteligente aqui também!
     filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
-    dados = await db.agg_casos_clima_por_mes.find(filtro, {"_id": 0}).to_list(length=None)
-    return dados
+    return await db.agg_casos_clima_por_mes.find(filtro, {"_id": 0}).to_list(length=None)
 
 @router.get("/demografia")
 async def get_dados_demograficos(doenca: str = None):
     filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
     
-    faixa_etaria = await db.agg_casos_por_faixa_etaria.find(filtro, {"_id": 0}).to_list(length=None)
-    sexo = await db.agg_casos_por_sexo.find(filtro, {"_id": 0}).to_list(length=None)
-    letalidade = await db.agg_letalidade_doenca.find(filtro, {"_id": 0}).to_list(length=None)
+    # Executa as 3 consultas no banco simultaneamente
+    faixa_etaria, sexo, letalidade = await asyncio.gather(
+        db.agg_casos_por_faixa_etaria.find(filtro, {"_id": 0}).to_list(length=None),
+        db.agg_casos_por_sexo.find(filtro, {"_id": 0}).to_list(length=None),
+        db.agg_letalidade_doenca.find(filtro, {"_id": 0}).to_list(length=None)
+    )
     
     return {
         "faixa_etaria": faixa_etaria,

@@ -1,36 +1,53 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, CircleMarker, Tooltip } from 'react-leaflet';
 import api from '@/app/services/api';
 import HeatmapLayer from './HeatmapLayer';
 
 // Coordenadas centrais de Campinas
 const CENTRO_CAMPINAS: [number, number] = [-22.9056, -47.0608];
 
-export default function MapComponent() {
+export default function MapComponent({ doenca }: { doenca?: string }) {
   const [riscoData, setRiscoData] = useState<any>(null);
   const [vulnData, setVulnData] = useState<any>(null);
   const [casosData, setCasosData] = useState<[number, number, number][]>([]);
+  const [hospitaisData, setHospitaisData] = useState<any[]>([]);
 
   useEffect(() => {
-    // Busca os polígonos que curámos no MongoDB
+    // Busca os polígonos que curámos no MongoDB (apenas na montagem)
     api.get('/dashboard/mapas/risco').then(res => setRiscoData(res.data)).catch(() => {});
     api.get('/dashboard/mapas/vulnerabilidade').then(res => setVulnData(res.data)).catch(() => {});
-    
-    // Simular busca de casos geolocalizados para o Heatmap
-    // Num cenário real, isso viria da API
-    const mockCasos: [number, number, number][] = Array.from({ length: 150 }).map(() => [
-      CENTRO_CAMPINAS[0] + (Math.random() - 0.5) * 0.1,
-      CENTRO_CAMPINAS[1] + (Math.random() - 0.5) * 0.1,
-      Math.random() // Intensidade
-    ]);
-    setCasosData(mockCasos);
   }, []);
 
+  useEffect(() => {
+    // Busca dados dos hospitais quando a doença muda
+    api.get('/dashboard/mapas/casos', { params: { doenca } })
+      .then(res => {
+        const dados = res.data;
+        setHospitaisData(dados);
+        
+        // Gerar dados do heatmap reais baseados na intensidade de casos
+        if (dados.length > 0) {
+          const maxCasos = Math.max(...dados.map((h: any) => h.total_casos || 0));
+          const heatmapPoints: [number, number, number][] = dados.map((h: any) => [
+            h.latitude,
+            h.longitude,
+            maxCasos > 0 ? (h.total_casos || 0) / maxCasos : 0 // Intensidade normalizada (0.0 a 1.0)
+          ]);
+          setCasosData(heatmapPoints);
+        } else {
+          setCasosData([]);
+        }
+      })
+      .catch(err => console.error("Erro ao buscar dados dos hospitais:", err));
+  }, [doenca]);
+
   // Estilos das nossas camadas geográficas
-  const estiloRisco = { color: '#ef4444', weight: 2, fillOpacity: 0.2 }; // Vermelho
-  const estiloVuln = { color: '#eab308', weight: 2, fillOpacity: 0.2 }; // Amarelo
+  // Risco de inundação (Água) -> Azul/Ciano
+  const estiloRisco = { color: '#0ea5e9', weight: 1.5, fillOpacity: 0.15, dashArray: '4' }; 
+  // Vulnerabilidade -> Roxo
+  const estiloVuln = { color: '#8b5cf6', weight: 1.5, fillOpacity: 0.15 }; 
 
   return (
     <MapContainer 
@@ -94,6 +111,38 @@ export default function MapComponent() {
                 }
               }}
             />
+          </LayersControl.Overlay>
+        )}
+
+        {/* Camada de Hospitais/Unidades de Saúde */}
+        {hospitaisData.length > 0 && (
+          <LayersControl.Overlay checked name="Unidades de Saúde (Hospitais)">
+            <LayerGroup>
+              {hospitaisData.map((h, idx) => {
+                // Dimensão proporcional aos casos (Reduzido max para 25 para evitar poluição visual)
+                const radius = Math.max(4, Math.min(25, Math.sqrt(h.total_casos || 0) * 1.5));
+                return (
+                  <CircleMarker
+                    key={`hosp-${idx}`}
+                    center={[h.latitude, h.longitude]}
+                    radius={radius}
+                    pathOptions={{
+                      color: '#ffffff', // Borda Branca para destacar
+                      fillColor: '#f43f5e', // Rosa/Vermelho
+                      fillOpacity: 0.5,     // Mais transparente para ver as sobreposições
+                      weight: radius > 10 ? 1 : 0.5 // Borda mais fina em bolhas pequenas
+                    }}
+                  >
+                    <Tooltip direction="top" offset={[0, -radius]} opacity={1}>
+                      <div className="text-slate-800 p-1">
+                        <strong className="block text-sm mb-1">{h.hospital}</strong>
+                        <span className="text-xs text-rose-600 font-bold">{h.total_casos?.toLocaleString('pt-BR')} Casos</span>
+                      </div>
+                    </Tooltip>
+                  </CircleMarker>
+                );
+              })}
+            </LayerGroup>
           </LayersControl.Overlay>
         )}
 
