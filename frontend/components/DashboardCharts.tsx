@@ -107,20 +107,47 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
 
   let dadosIdadeParaExibir = dadosDemograficos?.faixa_etaria;
   if (filtroIdades.trim() !== '') {
-    // Pega apenas os números digitados (ignora letras como 'anos', e converte '05' para 5)
-    const idadesBuscadas = filtroIdades.split(',')
-      .map(v => parseInt(v.replace(/\\D/g, ''), 10))
-      .filter(v => !isNaN(v));
-
-    if (idadesBuscadas.length > 0 && dadosDemograficos?.idade_exata) {
-      dadosIdadeParaExibir = dadosDemograficos.idade_exata
-        .filter((item: any) => idadesBuscadas.includes(parseInt(item.idade, 10)))
-        .map((item: any) => ({
-          ...item,
-          faixa_etaria: `${item.idade} anos` // Reutiliza a key 'faixa_etaria' pro BarChart não quebrar
-        }));
+    const segments = filtroIdades.split(',').map(v => v.trim()).filter(v => v !== '');
+    if (segments.length > 0 && dadosDemograficos?.idade_exata) {
+      dadosIdadeParaExibir = [];
+      segments.forEach(segment => {
+        if (segment.includes('-')) {
+          const parts = segment.split('-');
+          const start = parseInt(parts[0].replace(/\D/g, ''), 10);
+          const end = parseInt(parts[1].replace(/\D/g, ''), 10);
+          if (!isNaN(start) && !isNaN(end) && start <= end) {
+            let totalCasos = 0;
+            dadosDemograficos.idade_exata.forEach((item: any) => {
+              const idade = parseInt(item.idade, 10);
+              if (idade >= start && idade <= end) {
+                totalCasos += item.total_casos;
+              }
+            });
+            if (totalCasos > 0) {
+              dadosIdadeParaExibir.push({
+                faixa_etaria: `${start} a ${end} anos`,
+                total_casos: totalCasos
+              });
+            }
+          }
+        } else {
+          const idadeBuscada = parseInt(segment.replace(/\D/g, ''), 10);
+          if (!isNaN(idadeBuscada)) {
+            let totalCasos = 0;
+            dadosDemograficos.idade_exata.forEach((item: any) => {
+              if (parseInt(item.idade, 10) === idadeBuscada) totalCasos += item.total_casos;
+            });
+            if (totalCasos > 0) {
+              dadosIdadeParaExibir.push({
+                faixa_etaria: `${idadeBuscada} anos`,
+                total_casos: totalCasos
+              });
+            }
+          }
+        }
+      });
     } else {
-      dadosIdadeParaExibir = []; // Nenhuma idade válida digitada
+      dadosIdadeParaExibir = [];
     }
   }
 
@@ -183,12 +210,12 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
             <div className="relative">
               <input 
                 type="text" 
-                placeholder="Ex: 25, 30, 45" 
+                placeholder="Ex: 25, 30-40" 
                 value={filtroIdades}
                 onChange={(e) => setFiltroIdades(e.target.value)}
                 className="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5 shadow-inner"
               />
-              <span className="absolute right-3 top-2.5 text-slate-500 text-xs pointer-events-none">Filtro exato</span>
+              <span className="absolute right-3 top-2.5 text-slate-500 text-xs pointer-events-none">Filtro avançado</span>
             </div>
           </div>
 
