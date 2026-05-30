@@ -59,10 +59,16 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
         'I': 'Indeterminado'
       };
 
-      const sexoFormatado = sexoAgregado.map((item: any, index: number) => ({
+      const SEXO_COLOR_MAP: Record<string, string> = {
+        'M': '#06b6d4', // Cyan
+        'F': '#8b5cf6', // Violet
+        'I': '#e11d48'  // Rose
+      };
+
+      const sexoFormatado = sexoAgregado.map((item: any) => ({
         ...item,
         sexo_nome: SEXO_MAP[item.sexo] || item.sexo,
-        fill: CORES_SEXO[index % CORES_SEXO.length]
+        fill: SEXO_COLOR_MAP[item.sexo] || '#94a3b8'
       }));
 
       setDadosTemporais(temporalFormatado);
@@ -173,7 +179,7 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={dadosDemograficos?.sexo} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} dataKey="total_casos" nameKey="sexo_nome" label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`} stroke="none">
+                <Pie data={dadosDemograficos?.sexo} cx="50%" cy="50%" innerRadius={80} outerRadius={110} paddingAngle={8} dataKey="total_casos" nameKey="sexo_nome" label={({ percent }) => `${((percent || 0) * 100).toFixed(2)}%`} stroke="none">
                   {dadosDemograficos?.sexo?.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} style={{ filter: `drop-shadow(0px 0px 8px ${entry.fill}60)` }} />
                   ))}
