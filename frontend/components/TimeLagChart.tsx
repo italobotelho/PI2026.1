@@ -11,6 +11,9 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
   const [lagSemanas, setLagSemanas] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  // Classificação da doença para adaptar a biologia do gráfico (usando os IDs do sistema)
+  const isDoencaHidrica = ['HEPA', 'LEPT'].includes(doenca);
+
   useEffect(() => {
     setLoading(true);
     api.get('/dashboard/temporal', { params: { doenca, granularidade: 'semana' } })
@@ -73,7 +76,14 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
     <div className={cardClass}>
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 opacity-50"></div>
       <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Análise de Defasagem (Time Lag)</h3>
-      <p className="text-sm text-slate-400 mb-6">Compare picos de chuva, temperatura e <strong className="text-indigo-400">umidade</strong> com a explosão de casos ajustando o tempo de resposta. O lag ocorre porque a chuva cria criadouros e a <strong>alta umidade prolonga o tempo de vida do mosquito adulto</strong>, aumentando a janela de transmissão semanas depois.</p>
+      <p className="text-sm text-slate-400 mb-6">
+        Compare picos de chuva{isDoencaHidrica ? "" : ", temperatura e umidade"} com a explosão de casos ajustando o tempo de resposta. 
+        {isDoencaHidrica ? (
+          <span> O lag ocorre devido ao tempo de incubação após o contato com <strong>águas de chuvas intensas e enchentes</strong> contaminadas por microrganismos.</span>
+        ) : (
+          <span> O lag ocorre porque a chuva cria criadouros e a <strong>alta umidade prolonga o tempo de vida do mosquito adulto</strong>, aumentando a janela de transmissão semanas depois.</span>
+        )}
+      </p>
       
       <div className="mb-6 flex flex-col md:flex-row items-start md:items-center gap-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
         <label className="text-sm font-semibold text-slate-300 whitespace-nowrap">
@@ -88,7 +98,12 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
           onChange={(e) => setLagSemanas(parseInt(e.target.value))}
           className="w-full md:w-64 accent-cyan-500"
         />
-        <p className="text-xs text-slate-500 ml-auto hidden md:block">Arraste para alinhar o clima com os picos de infecção.</p>
+        <p className="text-xs text-slate-500 ml-auto hidden md:block">
+          {isDoencaHidrica 
+            ? "Arraste para alinhar a chuva com o pico de infecção (Lepto: 1-2 sem | Hepatite: 2-7 sem)."
+            : "Arraste para alinhar o clima com os picos de infecção (Mosquitos: ~4 sem)."
+          }
+        </p>
       </div>
 
       {loading ? (
@@ -138,8 +153,14 @@ export default function TimeLagChart({ doenca }: { doenca: string }) {
               />
               
               <Bar yAxisId="left" dataKey="precipitacao" name="Volume de Chuva (mm)" fill="url(#colorPrecip)" radius={[4, 4, 0, 0]} barSize={8} opacity={0.7} />
-              <Line yAxisId="temp" type="monotone" dataKey="temperatura" name="Temperatura (°C)" stroke="#f59e0b" strokeWidth={2} opacity={0.5} dot={false} activeDot={{ r: 4 }} />
-              <Line yAxisId="humidity" type="monotone" dataKey="umidade" name="Umidade Média (%)" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="5 5" opacity={0.7} dot={false} activeDot={{ r: 4 }} />
+              
+              {!isDoencaHidrica && (
+                <>
+                  <Line yAxisId="temp" type="monotone" dataKey="temperatura" name="Temperatura (°C)" stroke="#f59e0b" strokeWidth={2} opacity={0.5} dot={false} activeDot={{ r: 4 }} />
+                  <Line yAxisId="humidity" type="monotone" dataKey="umidade" name="Umidade Média (%)" stroke="#8b5cf6" strokeWidth={2} strokeDasharray="5 5" opacity={0.7} dot={false} activeDot={{ r: 4 }} />
+                </>
+              )}
+              
               <Line yAxisId="right" type="monotone" dataKey={getCasosDeslocados} name={`Casos (Lag: ${lagSemanas} sem)`} stroke="#f43f5e" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#f43f5e', stroke: '#fff', strokeWidth: 2 }} />
               
               <Brush 
