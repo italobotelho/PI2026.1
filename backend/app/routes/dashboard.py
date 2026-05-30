@@ -79,17 +79,19 @@ async def get_dados_temporais(doenca: str = None, granularidade: str = "mes"):
 async def get_dados_demograficos(doenca: str = None):
     filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
     
-    # Executa as 3 consultas no banco simultaneamente
-    faixa_etaria, sexo, letalidade = await asyncio.gather(
+    # Executa as 4 consultas no banco simultaneamente
+    faixa_etaria, sexo, letalidade, idade_exata = await asyncio.gather(
         db.agg_casos_por_faixa_etaria.find(filtro, {"_id": 0}).to_list(length=None),
         db.agg_casos_por_sexo.find(filtro, {"_id": 0}).to_list(length=None),
-        db.agg_letalidade_doenca.find(filtro, {"_id": 0}).to_list(length=None)
+        db.agg_letalidade_doenca.find(filtro, {"_id": 0}).to_list(length=None),
+        db.agg_casos_por_idade.find(filtro, {"_id": 0}).to_list(length=None)
     )
     
     return {
         "faixa_etaria": faixa_etaria,
         "sexo": sexo,
-        "letalidade": letalidade
+        "letalidade": letalidade,
+        "idade_exata": idade_exata
     }
 
 @router.get("/mapas/risco")

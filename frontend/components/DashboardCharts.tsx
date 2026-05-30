@@ -16,6 +16,7 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
   const [dadosTemporais, setDadosTemporais] = useState<any[]>([]);
   const [dadosDemograficos, setDadosDemograficos] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [filtroIdades, setFiltroIdades] = useState<string>('');
 
   useEffect(() => {
     setLoading(true);
@@ -51,6 +52,9 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
       const faixaEtariaAgregada = aggregateData(resDemografia.data?.faixa_etaria, 'faixa_etaria')
         .sort((a: any, b: any) => a.faixa_etaria.localeCompare(b.faixa_etaria)); // Ordenar alfabeticamente ('00 a 04' -> '80+')
 
+      const idadeExataAgregada = aggregateData(resDemografia.data?.idade_exata, 'idade')
+        .sort((a: any, b: any) => Number(a.idade) - Number(b.idade));
+
       const sexoAgregado = aggregateData(resDemografia.data?.sexo, 'sexo');
       
       const SEXO_MAP: Record<string, string> = {
@@ -75,6 +79,7 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
       setDadosDemograficos({
         ...resDemografia.data,
         faixa_etaria: faixaEtariaAgregada,
+        idade_exata: idadeExataAgregada,
         sexo: sexoFormatado
       });
       setLoading(false);
@@ -98,7 +103,26 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
 
   const tooltipStyle = { backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(51, 65, 85, 0.5)', color: '#f8fafc', borderRadius: '12px', backdropFilter: 'blur(8px)', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' };
   
-  const cardClass = "bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 relative overflow-hidden";
+  const cardClass = "bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 relative overflow-hidden flex flex-col";
+
+  let dadosIdadeParaExibir = dadosDemograficos?.faixa_etaria;
+  if (filtroIdades.trim() !== '') {
+    // Pega apenas os números digitados (ignora letras como 'anos', e converte '05' para 5)
+    const idadesBuscadas = filtroIdades.split(',')
+      .map(v => parseInt(v.replace(/\\D/g, ''), 10))
+      .filter(v => !isNaN(v));
+
+    if (idadesBuscadas.length > 0 && dadosDemograficos?.idade_exata) {
+      dadosIdadeParaExibir = dadosDemograficos.idade_exata
+        .filter((item: any) => idadesBuscadas.includes(parseInt(item.idade, 10)))
+        .map((item: any) => ({
+          ...item,
+          faixa_etaria: `${item.idade} anos` // Reutiliza a key 'faixa_etaria' pro BarChart não quebrar
+        }));
+    } else {
+      dadosIdadeParaExibir = []; // Nenhuma idade válida digitada
+    }
+  }
 
   return (
     <div className="w-full space-y-8">
@@ -153,23 +177,43 @@ export default function DashboardCharts({ doenca }: { doenca: string }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className={cardClass}>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50"></div>
-          <h3 className="text-xl font-bold text-white mb-6 tracking-tight">Casos por Faixa Etária</h3>
-          <div className="h-[320px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dadosDemograficos?.faixa_etaria} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                <defs>
-                  <linearGradient id="colorBar" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#f59e0b" />
-                    <stop offset="100%" stopColor="#d97706" />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} />
-                <XAxis type="number" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
-                <YAxis dataKey="faixa_etaria" type="category" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
-                <Bar dataKey="total_casos" name="Casos" fill="url(#colorBar)" radius={[0, 6, 6, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+            <h3 className="text-xl font-bold text-white tracking-tight">Casos por Idade</h3>
+            <div className="relative">
+              <input 
+                type="text" 
+                placeholder="Ex: 25, 30, 45" 
+                value={filtroIdades}
+                onChange={(e) => setFiltroIdades(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5 shadow-inner"
+              />
+              <span className="absolute right-3 top-2.5 text-slate-500 text-xs pointer-events-none">Filtro exato</span>
+            </div>
+          </div>
+
+          <div className="h-[320px] w-full flex-grow">
+            {dadosIdadeParaExibir && dadosIdadeParaExibir.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dadosIdadeParaExibir} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="colorBar" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#d97706" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} />
+                  <XAxis type="number" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="faixa_etaria" type="category" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{fill: 'rgba(255,255,255,0.05)'}} />
+                  <Bar dataKey="total_casos" name="Casos" fill="url(#colorBar)" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-500 text-sm italic">
+                Nenhum caso encontrado para as idades: {filtroIdades}
+              </div>
+            )}
           </div>
         </div>
 

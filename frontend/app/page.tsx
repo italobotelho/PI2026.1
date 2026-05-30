@@ -51,7 +51,12 @@ export default function Home() {
               {DOENCAS.map((d) => (
                 <button
                   key={d.id}
-                  onClick={() => setDoencaSelecionada(d.id)}
+                  onClick={() => {
+                    setDoencaSelecionada(d.id);
+                    if (d.id === '' && activeTab === 'clima') {
+                      setActiveTab('geral');
+                    }
+                  }}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 border whitespace-nowrap ${
                     doencaSelecionada === d.id 
                       ? d.activeClass 
@@ -64,7 +69,7 @@ export default function Home() {
             </div>
             
             <div className="flex gap-2 overflow-x-auto border-t border-slate-700/50 pt-4 hide-scrollbar">
-              {TABS.map(tab => (
+              {TABS.filter(tab => !(doencaSelecionada === '' && tab.id === 'clima')).map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
