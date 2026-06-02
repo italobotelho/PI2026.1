@@ -33,12 +33,14 @@ export default function DemographicSunburst({
         const totalFaixaEtaria = faixa_etaria.reduce((acc: number, curr: any) => acc + (curr.total_casos || 0), 0) || 1;
 
         const treeData = {
+          id: 'root',
           name: doenca || "Geral",
           color: "hsl(210, 20%, 30%)",
           children: sexo.map((s: any, i: number) => {
             const isFem = s.sexo === 'F' || s.sexo === 'FEMININO';
             const baseColor = isFem ? 340 : 210;
             return {
+              id: `sexo-${s.sexo || i}`,
               name: s.sexo || "Desconhecido",
               color: `hsl(${baseColor}, 70%, 50%)`,
               children: faixa_etaria.map((f: any, j: number) => {
@@ -46,6 +48,7 @@ export default function DemographicSunburst({
                 const propFaixa = (f.total_casos || 0) / totalFaixaEtaria;
                 const casosEstimados = Math.round(propFaixa * (s.total_casos || 0));
                 return {
+                  id: `${s.sexo || i}-${f.faixa_etaria || "NI"}-${j}`,
                   name: f.faixa_etaria || "N/I",
                   color: `hsl(${baseColor}, ${60 - (j * 5)}%, ${60 + (j * 5)}%)`,
                   loc: casosEstimados
@@ -79,7 +82,7 @@ export default function DemographicSunburst({
           <ResponsiveSunburst
             data={dados}
             margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            id="name"
+            id="id"
             value="loc"
             cornerRadius={2}
             borderColor={{ theme: 'background' }}
@@ -88,12 +91,12 @@ export default function DemographicSunburst({
             childColor={{ from: 'color', modifiers: [ [ 'brighter', 0.15 ] ] }}
             borderWidth={2}
             enableArcLabels={true}
-            arcLabel="id"
+            arcLabel={d => d.data.name}
             arcLabelsSkipAngle={12}
             arcLabelsTextColor="#ffffff"
-            tooltip={({ id, value, color }) => (
+            tooltip={({ id, value, color, data }) => (
               <div className="bg-slate-800 text-white p-2 rounded shadow-lg text-sm border border-slate-700">
-                <strong style={{ color }}>{id}</strong>: {Math.round(value)} casos
+                <strong style={{ color }}>{data.name}</strong>: {Math.round(value)} casos
               </div>
             )}
             theme={{
