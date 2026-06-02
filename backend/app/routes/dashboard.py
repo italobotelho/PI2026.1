@@ -202,7 +202,7 @@ async def get_mapa_casos(doenca: str = None, ano: int = None, sexo: str = None):
             {"$match": filtro_raw},
             {"$match": {"LATITUDE": {"$type": "double"}, "LONGITUDE": {"$type": "double"}}},
             {"$group": {
-                "_id": {"lat": "$LATITUDE", "lon": "$LONGITUDE", "hospital": "$NOME_UNIDADE"},
+                "_id": {"lat": "$LATITUDE", "lon": "$LONGITUDE", "hospital": "$NO_FANTASIA"},
                 "total_casos": {"$sum": 1}
             }},
             {"$project": {

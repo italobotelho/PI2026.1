@@ -7,21 +7,10 @@ async def run():
     
     filtro = {"NOME_DOENCA": "DENGUE"}
     
-    pipeline = [
-        {"$match": filtro},
-        {"$group": {
-            "_id": None,
-            "total_casos": {"$sum": 1},
-            "hospitalizacoes": {
-                "$sum": {"$cond": [{"$eq": ["$HOSPITALIZ", "1"]}, 1, 0]}
-            }
-        }}
-    ]
-    
-    res = await db.casos_geolocalizados.aggregate(pipeline).to_list(length=1)
+    doc = await db.casos_geolocalizados.find_one()
     
     end = time.time()
     print(f"Time taken: {end - start:.2f} seconds")
-    print(res)
+    print(list(doc.keys()))
 
 asyncio.run(run())
