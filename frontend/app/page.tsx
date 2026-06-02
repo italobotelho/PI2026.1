@@ -170,6 +170,23 @@ export default function Home() {
 
         {activeTab === 'geo' && (
           <>
+            {(doencaSelecionada === 'HEPA' || doencaSelecionada === 'ZIKA') && (
+              <div className="bg-amber-500/10 border border-amber-500/50 rounded-2xl p-4 flex gap-4 items-start shadow-lg mb-2">
+                <div className="text-amber-400 mt-0.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-1">Nota de Imputação de Dados</h4>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    {doencaSelecionada === 'HEPA' 
+                      ? "Atenção: 100% dos dados de unidade de saúde para Hepatite A foram imputados e alocados no centro da cidade devido à ausência de registros geográficos precisos. A visualização no mapa representa essa alocação central e não a distribuição real."
+                      : "Atenção: 86.7% dos dados de unidade de saúde para Zika foram imputados e alocados no centro da cidade, pois não foi possível determinar a localização com precisão original. A visualização no mapa está fortemente concentrada nessa região."}
+                  </p>
+                </div>
+              </div>
+            )}
             <DashboardMap doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
             <DemographicSunburst doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
           </>
