@@ -230,27 +230,25 @@ export default function DashboardCharts({
           <h3 className="text-xl font-bold text-white mb-6 tracking-tight">Distribuição por Sexo</h3>
           <div className="h-[320px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 <Pie 
                   data={dadosDemograficos?.sexo} 
                   cx="50%" 
                   cy="50%" 
-                  innerRadius={80} 
-                  outerRadius={110} 
+                  innerRadius={70} 
+                  outerRadius={100} 
                   paddingAngle={8} 
                   dataKey="total_casos" 
                   nameKey="sexo_nome" 
                   label={({ percent }) => `${((percent || 0) * 100).toFixed(2)}%`} 
                   stroke="none"
-                  onClick={(data, index) => setFiltroSexo(data.sexo)}
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
                 >
                   {dadosDemograficos?.sexo?.map((entry: any, index: number) => (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={entry.fill} 
                       style={{ 
-                        filter: filtroSexo && filtroSexo !== entry.sexo ? 'grayscale(80%) opacity(40%)' : `drop-shadow(0px 0px 8px ${entry.fill}60)`,
+                        filter: `drop-shadow(0px 0px 8px ${entry.fill}60)`,
                         transition: 'all 0.3s ease'
                       }} 
                     />
