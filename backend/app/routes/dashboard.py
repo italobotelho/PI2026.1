@@ -63,7 +63,8 @@ async def get_resumo_kpis(doenca: str = None, ano: int = None, sexo: str = None)
             }}
         )
         
-        raw_res = await db.casos_geolocalizados.aggregate(pipeline).to_list(length=1)
+        cursor = await db.casos_geolocalizados.aggregate(pipeline)
+        raw_res = await cursor.to_list(length=1)
         if raw_res:
             total_casos_doenca = raw_res[0].get("total_casos", 0)
             total_hospitalizados = raw_res[0].get("hospitalizacoes", 0)
@@ -213,7 +214,8 @@ async def get_mapa_casos(doenca: str = None, ano: int = None, sexo: str = None):
                 "total_casos": 1
             }}
         ]
-        return await db.casos_geolocalizados.aggregate(pipeline).to_list(length=None)
+        cursor = await db.casos_geolocalizados.aggregate(pipeline)
+        return await cursor.to_list(length=None)
     else:
         return await db.agg_mapa_casos.find(filtro, {"_id": 0}).to_list(length=None)
 
@@ -268,7 +270,8 @@ async def get_dados_dinamicos(
         }}
     ]
     
-    resultados = await db.agg_cubo_casos.aggregate(pipeline).to_list(length=1)
+    cursor = await db.agg_cubo_casos.aggregate(pipeline)
+    resultados = await cursor.to_list(length=1)
     if not resultados:
         return {"faixa_etaria": [], "idade_exata": [], "sexo": [], "letalidade": [], "tempo": []}
     return resultados[0]

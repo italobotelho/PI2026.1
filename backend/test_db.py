@@ -1,9 +1,9 @@
 import asyncio, os
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from dotenv import load_dotenv
 
 load_dotenv()
-client = AsyncIOMotorClient(os.getenv('MONGO_URL'))
+client = AsyncMongoClient(os.getenv('MONGO_URL'))
 db = client.siest_db
 
 async def run():

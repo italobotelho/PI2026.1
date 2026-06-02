@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 import os
 from dotenv import load_dotenv
 
@@ -11,7 +11,7 @@ MONGO_URL = os.getenv("MONGO_URL")
 if not MONGO_URL:
     raise ValueError("⚠️ ERRO: Variável MONGO_URL não encontrada. Crie o ficheiro .env!")
 
-client = AsyncIOMotorClient(MONGO_URL)
+client = AsyncMongoClient(MONGO_URL)
 db = client.siest_db
 
 print("🔌 Cliente MongoDB (Motor) inicializado com segurança.")
