@@ -7,10 +7,10 @@ import DashboardCharts from '../components/DashboardCharts';
 import DashboardMap from '../components/DashboardMap';
 import TimeLagChart from '../components/TimeLagChart';
 import CorrelationScatter from '../components/CorrelationScatter';
-import DemographicSunburst from '../components/DemographicSunburst';
 import ClinicalOutcomesSankey from '../components/ClinicalOutcomesSankey';
 import SurveillanceResponseChart from '../components/SurveillanceResponseChart';
 import HealthcareUnitsChart from '../components/HealthcareUnitsChart';
+import BairrosRanking from '../components/BairrosRanking';
 
 const DOENCAS = [
   { id: '', nome: 'Geral (Todas)', colorInfo: 'from-indigo-500 to-purple-500', activeClass: 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] border-indigo-500' },
@@ -192,7 +192,7 @@ export default function Home() {
               </div>
             )}
             <DashboardMap doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <DemographicSunburst doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
+            <BairrosRanking doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
           </>
         )}
 

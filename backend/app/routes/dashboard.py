@@ -15,7 +15,7 @@ AGE_WEIGHTS = {
 async def get_resumo_kpis(doenca: str = None, ano: int = None, sexo: str = None):
     """Retorna os KPIs gerais ou específicos da doença, filtrados por ano e sexo."""
     
-    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    filtro = {"doenca": doenca} if doenca else {}
 
     resumo_clima = await db.agg_resumo_clima.find_one({}, {"_id": 0}) or {}
 
@@ -25,7 +25,7 @@ async def get_resumo_kpis(doenca: str = None, ano: int = None, sexo: str = None)
         # Agregação dinâmica para suportar o filtro de ano e sexo
         filtro_raw = {}
         if doenca:
-            filtro_raw["NOME_DOENCA"] = {"$regex": f"^{doenca}$", "$options": "i"}
+            filtro_raw["NOME_DOENCA"] = doenca
         if sexo:
             filtro_raw["CS_SEXO"] = sexo
         if ano:
@@ -138,7 +138,7 @@ async def get_resumo_kpis(doenca: str = None, ano: int = None, sexo: str = None)
 
 @router.get("/temporal")
 async def get_dados_temporais(doenca: str = None, granularidade: str = "mes", ano: int = None, sexo: str = None):
-    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    filtro = {"doenca": doenca} if doenca else {}
     if ano:
         filtro["ano"] = ano
     # Sexo is ignored for climate aggregates since climate data applies to all demographics
@@ -150,7 +150,7 @@ async def get_dados_temporais(doenca: str = None, granularidade: str = "mes", an
 
 @router.get("/demografia")
 async def get_dados_demograficos(doenca: str = None):
-    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    filtro = {"doenca": doenca} if doenca else {}
     
     # Executa as 4 consultas no banco simultaneamente
     faixa_etaria, sexo, letalidade, idade_exata = await asyncio.gather(
@@ -179,18 +179,18 @@ async def get_mapa_vulnerabilidade():
 
 @router.get("/hospitais")
 async def get_hospitais(doenca: str = None):
-    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    filtro = {"doenca": doenca} if doenca else {}
     dados = await db.agg_casos_por_hospital.find(filtro, {"_id": 0}).to_list(length=None)
     return dados
 
 @router.get("/mapas/casos")
 async def get_mapa_casos(doenca: str = None, ano: int = None, sexo: str = None, evolucao: str = None, hospitalizado: str = None):
-    filtro = {"doenca": {"$regex": f"^{doenca}$", "$options": "i"}} if doenca else {}
+    filtro = {"doenca": doenca} if doenca else {}
     
     if ano or sexo or evolucao or hospitalizado:
         filtro_raw = {}
         if doenca:
-            filtro_raw["NOME_DOENCA"] = {"$regex": f"^{doenca}$", "$options": "i"}
+            filtro_raw["NOME_DOENCA"] = doenca
         if sexo:
             filtro_raw["CS_SEXO"] = sexo
         if evolucao:
@@ -222,6 +222,45 @@ async def get_mapa_casos(doenca: str = None, ano: int = None, sexo: str = None, 
         return await cursor.to_list(length=None)
     else:
         return await db.agg_mapa_casos.find(filtro, {"_id": 0}).to_list(length=None)
+
+@router.get("/bairros")
+async def get_bairros_ranking(doenca: str = None, ano: int = None, sexo: str = None):
+    filtro_raw = {}
+    if doenca:
+        filtro_raw["NOME_DOENCA"] = doenca
+    if sexo:
+        filtro_raw["CS_SEXO"] = sexo
+    if ano:
+        from datetime import datetime
+        inicio = datetime(ano, 1, 1)
+        fim = datetime(ano, 12, 31, 23, 59, 59)
+        filtro_raw["DT_NOTIFIC"] = {"$gte": inicio, "$lte": fim}
+        
+    pipeline = [
+        {"$match": filtro_raw},
+        {"$project": {
+            "NO_FANTASIA": {
+                "$cond": [
+                    {"$in": [{"$trim": {"input": {"$ifNull": ["$NO_FANTASIA", ""]}}}, ["", "IGNORADO", "N/A"]]},
+                    "UNIDADE NÃO INFORMADA",
+                    {"$trim": {"input": "$NO_FANTASIA"}}
+                ]
+            }
+        }},
+        {"$group": {
+            "_id": "$NO_FANTASIA",
+            "total_casos": {"$sum": 1}
+        }},
+        {"$sort": {"total_casos": -1}},
+        {"$limit": 10},
+        {"$project": {
+            "_id": 0,
+            "local": "$_id",
+            "total_casos": 1
+        }}
+    ]
+    cursor = await db.casos_geolocalizados.aggregate(pipeline)
+    return await cursor.to_list(length=None)
 
 @router.get("/dinamico")
 async def get_dados_dinamicos(
