@@ -9,7 +9,7 @@
 
 Este projeto é uma plataforma full-stack focada na **Gestão de Saúde Pública e Epidemiologia Analítica**. O **SIEST** consolida dados extraídos do SINAN (Sistema de Informação de Agravos de Notificação) e os cruza com índices de vulnerabilidade habitacional e inundações, entregando um dashboard interativo focado no combate estratégico a doenças geolocalizadas como Dengue, Zika, Chikungunya, Leptospirose e Hepatite A.
 
-Este trabalho faz parte do currículo de **Ciência de Dados e Inteligência Artificial** da **PUC-Campinas (2025/2026)**.
+Este trabalho faz parte do currículo de **Ciência de Dados e Inteligência Artificial** da **PUC-Campinas (2026)**.
 
 ---
 
@@ -82,5 +82,5 @@ O SIEST implementa um sistema de alerta epidemiológico único no código (`page
 
 ## 🎓 Autor e Créditos
 
-Desenvolvido por **Ítalo Botelho** e colegas como projeto acadêmico de TCC/PI na **PUC-Campinas (2025/2026)**.
+Desenvolvido por **Ítalo Botelho** e colegas como projeto acadêmico de PI na **PUC-Campinas (2026)**.
 Projeto com ênfase completa na intersecção entre Desenvolvimento Web Moderno, Banco de Dados Não-Relacional e Estatística Pública de Saúde.
