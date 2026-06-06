@@ -22,6 +22,34 @@ Este trabalho faz parte do currículo de **Ciência de Dados e Inteligência Art
 
 ---
 
+## 🎮 Interface e Visualizações
+
+Abaixo, algumas das principais telas e gráficos interativos que compõem o sistema. O SIEST foi projetado com uma interface altamente dinâmica (Dark Mode nativo) que reage em tempo real aos filtros demográficos.
+
+*(Substitua os links abaixo pelas suas próprias capturas de tela e GIFs e coloque as imagens na pasta `/assets`)*
+
+### 1. Dashboard Interativo (Visão Geral)
+Visão completa da plataforma, mostrando a responsividade e a navegação fluida entre os indicadores.
+
+![GIF da Interface Web](./assets/interface_web.gif)
+
+### 2. Mapa Epidemiológico (Heatmaps & Clusters)
+Mapeamento de vulnerabilidades através de marcações geoespaciais e cálculo de densidade (Polígonos de Calor).
+
+![Mapa Epidemiológico](./assets/mapa_epidemiologico.png)
+
+### 3. Grafo de Sobrecarga (Node-Link)
+Representação em rede do colapso do sistema de saúde. Mostra o fluxo de pacientes desde a origem da doença/idade até os hospitais (UPAs) de destino.
+
+![Grafo de Sobrecarga](./assets/grafo_sobrecarga.png)
+
+### 4. Pirâmide Demográfica e Termômetros
+Desdobramento por sexo e idade acompanhado dos gráficos que calculam o tempo de resposta do poder público (Data-Lag).
+
+![Pirâmide Demográfica](./assets/piramide_demografica.png)
+
+---
+
 ## 🚀 Funcionalidades Principais
 
 * **Filtros Temporais e Demográficos Inteligentes:** Altere todo o contexto do sistema cruzando os anos de incidência e o sexo biológico do paciente.
