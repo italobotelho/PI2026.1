@@ -692,4 +692,103 @@ async def get_unidades_carga(doenca: str = None, ano: int = None, sexo: str = No
             "severidade": r["severidade"]
         }
         for r in resultados
-    ]
+    ]
+
+@router.get("/grafo-sobrecarga")
+async def get_grafo_sobrecarga(modo_origem: str = "doenca", doenca: str = None, ano: int = None, sexo: str = None):
+    filtro = {
+        "NO_FANTASIA": {"$exists": True, "$ne": None, "$nin": ["", " ", "IGNORADO"]}
+    }
+    if doenca:
+        filtro["NOME_DOENCA"] = {"$regex": f"^{doenca}$", "$options": "i"}
+    if ano:
+        from datetime import datetime
+        inicio = datetime(ano, 1, 1)
+        fim = datetime(ano, 12, 31, 23, 59, 59)
+        filtro["DT_NOTIFIC"] = {"$gte": inicio, "$lte": fim}
+    if sexo:
+        filtro["CS_SEXO"] = sexo
+
+    if modo_origem == "faixa_etaria":
+        origem_expr = {
+            "$switch": {
+                "branches": [
+                    {"case": {"$lt": ["$idade_calc", 5]}, "then": "00 a 04 anos"},
+                    {"case": {"$lt": ["$idade_calc", 15]}, "then": "05 a 14 anos"},
+                    {"case": {"$lt": ["$idade_calc", 30]}, "then": "15 a 29 anos"},
+                    {"case": {"$lt": ["$idade_calc", 40]}, "then": "30 a 39 anos"},
+                    {"case": {"$lt": ["$idade_calc", 60]}, "then": "40 a 59 anos"},
+                    {"case": {"$lt": ["$idade_calc", 80]}, "then": "60 a 79 anos"}
+                ],
+                "default": "80+ anos"
+            }
+        }
+        pipeline = [
+            {"$match": filtro},
+            {"$project": {
+                "NO_FANTASIA": 1,
+                "idade_calc": {
+                    "$cond": [
+                        {"$gte": [{"$convert": {"input": "$NU_IDADE_N", "to": "int", "onError": 0, "onNull": 0}}, 4000]},
+                        {"$mod": [{"$convert": {"input": "$NU_IDADE_N", "to": "int", "onError": 0, "onNull": 0}}, 1000]},
+                        0
+                    ]
+                }
+            }},
+            {"$project": {
+                "NO_FANTASIA": 1,
+                "origem": origem_expr
+            }},
+            {"$group": {
+                "_id": {
+                    "origem": "$origem",
+                    "destino": "$NO_FANTASIA"
+                },
+                "peso": {"$sum": 1}
+            }}
+        ]
+    else:
+        pipeline = [
+            {"$match": filtro},
+            {"$group": {
+                "_id": {
+                    "origem": "$NOME_DOENCA",
+                    "destino": "$NO_FANTASIA"
+                },
+                "peso": {"$sum": 1}
+            }}
+        ]
+
+    cursor = await db.casos_geolocalizados.aggregate(pipeline)
+    resultados = await cursor.to_list(length=None)
+
+    nodes_dict = {}
+    links = []
+
+    for r in resultados:
+        origem = r["_id"].get("origem", "Desconhecido")
+        destino = r["_id"].get("destino", "Desconhecido")
+        peso = r.get("peso", 0)
+
+        # Filtra volumes muito pequenos para não sujar o grafo (opcional, setado para 2 para tirar casos super isolados)
+        if not origem or not destino or peso < 2:
+            continue
+
+        if origem not in nodes_dict:
+            nodes_dict[origem] = {"id": origem, "group": "source", "val": 0, "name": origem}
+        nodes_dict[origem]["val"] += peso
+
+        if destino not in nodes_dict:
+            nodes_dict[destino] = {"id": destino, "group": "target", "val": 0, "name": destino}
+        nodes_dict[destino]["val"] += peso
+
+        links.append({
+            "source": origem,
+            "target": destino,
+            "value": peso
+        })
+
+    return {
+        "nodes": list(nodes_dict.values()),
+        "links": links
+    }
