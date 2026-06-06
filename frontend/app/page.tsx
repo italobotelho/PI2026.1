@@ -180,7 +180,7 @@ export default function Home() {
                   }}
                   className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border whitespace-nowrap shadow-sm ${
                     doencaSelecionada === d.id 
-                      ? d.activeClass + ' scale-[1.03] ring-2 ring-offset-2 ring-offset-slate-900'
+                      ? d.activeClass + ' scale-[1.03] ring-1 ring-offset-2 ring-offset-slate-900'
                       : 'bg-slate-800/60 text-slate-400 border-slate-700/80 hover:bg-slate-700 hover:text-white hover:-translate-y-0.5'
                   }`}
                 >
