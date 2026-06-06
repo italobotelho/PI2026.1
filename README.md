@@ -39,8 +39,8 @@ Sendo uma solução robusta (Cliente-Servidor), a arquitetura do projeto foi div
 | Diretório | Stack Principal | Descrição |
 | :--- | :--- | :--- |
 | `frontend/` | `Next.js 14`, `Tailwind CSS` | Interface do Usuário (Dashboard). Inclui gráficos customizados (`Nivo`, `ECharts`, `Recharts`) sob o diretório `/components` e comunicação de APIs via Axios em `/app/services`. |
-| `backend/` | `Python`, `FastAPI` | O motor de agregação do sistema. Roteadores e agregações pesadas utilizando `Motor` (AsyncIO) para MongoDB, com pipelines projetadas e otimizadas em `/app/routes`. |
-| `.env` (Back) | `MongoDB Atlas` | String de conexão com o cluster de produção `siest_db` na nuvem. |
+| `backend/` | `Python`, `FastAPI` | O motor de agregação do sistema. Roteadores e agregações pesadas utilizando `PyMongo` (AsyncMongoClient) para MongoDB, com pipelines projetadas e otimizadas em `/app/routes`. |
+| `.env` (Back) | `MongoDB Atlas` | String de conexão com o cluster de produção `siest_db` na nuvem. (Baseado no modelo `.env.example`). |
 
 ---
 
