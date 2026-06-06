@@ -2,8 +2,44 @@ import asyncio
 from typing import Optional
 from fastapi import APIRouter
 from app.database import db
+from shapely.geometry import shape, Point
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
+
+# --- CACHE DE POLÍGONOS GEOESPACIAIS ---
+_poligonos_vulnerabilidade = None
+_poligonos_inundacao = None
+
+async def get_poligonos_vulnerabilidade():
+    global _poligonos_vulnerabilidade
+    if _poligonos_vulnerabilidade is None:
+        docs = await db.vulnerabilidade_habitacional.find().to_list(length=None)
+        _poligonos_vulnerabilidade = []
+        for doc in docs:
+            geom = doc.get("geometry")
+            if geom:
+                try:
+                    poly = shape(geom)
+                    nome = doc.get("properties", {}).get("NOME_AREA", "ÁREA DESCONHECIDA")
+                    _poligonos_vulnerabilidade.append((poly, nome))
+                except: pass
+    return _poligonos_vulnerabilidade
+
+async def get_poligonos_inundacao():
+    global _poligonos_inundacao
+    if _poligonos_inundacao is None:
+        docs = await db.risco_inundacao.find().to_list(length=None)
+        _poligonos_inundacao = []
+        for doc in docs:
+            geom = doc.get("geometry")
+            if geom:
+                try:
+                    poly = shape(geom)
+                    classe = doc.get("properties", {}).get("CLASSE", "Risco Desconhecido")
+                    _poligonos_inundacao.append((poly, classe))
+                except: pass
+    return _poligonos_inundacao
+# ---------------------------------------
 
 AGE_WEIGHTS = {
     "00 a 04": 2, "05 a 09": 7, "10 a 14": 12, "15 a 19": 17,
@@ -205,62 +241,223 @@ async def get_mapa_casos(doenca: str = None, ano: int = None, sexo: str = None, 
             
         pipeline = [
             {"$match": filtro_raw},
-            {"$match": {"LATITUDE": {"$type": "double"}, "LONGITUDE": {"$type": "double"}}},
+            {"$match": {"hospital": {"$exists": True, "$ne": None, "$ne": ""}}},
             {"$group": {
-                "_id": {"lat": "$LATITUDE", "lon": "$LONGITUDE", "hospital": "$NO_FANTASIA"},
-                "total_casos": {"$sum": 1}
+                "_id": "$hospital",
+                "total_casos": {"$sum": "$total_casos"},
+                "latitude": {"$first": "$latitude"},
+                "longitude": {"$first": "$longitude"}
             }},
             {"$project": {
                 "_id": 0,
-                "latitude": "$_id.lat",
-                "longitude": "$_id.lon",
-                "hospital": {"$ifNull": ["$_id.hospital", "Local Desconhecido"]},
+                "hospital": "$_id",
+                "latitude": 1,
+                "longitude": 1,
                 "total_casos": 1
             }}
         ]
-        cursor = await db.casos_geolocalizados.aggregate(pipeline)
+        cursor = await db.agg_vulnerabilidade_casos.aggregate(pipeline)
         return await cursor.to_list(length=None)
-    else:
-        return await db.agg_mapa_casos.find(filtro, {"_id": 0}).to_list(length=None)
 
-@router.get("/bairros")
-async def get_bairros_ranking(doenca: str = None, ano: int = None, sexo: str = None):
+    return await db.agg_mapa_casos.find(filtro, {"_id": 0}).to_list(length=None)
+
+@router.get("/demografia-sazonal")
+async def get_demografia_sazonal(doenca: str = None, ano: int = None, sexo: str = None):
+    filtro = {}
+    if doenca:
+        filtro["doenca"] = doenca
+    if sexo:
+        filtro["sexo"] = sexo
+    if ano:
+        filtro["ano"] = ano
+
+    pipeline = [
+        {"$match": filtro},
+        {"$group": {
+            "_id": {
+                "mes": "$mes",
+                "faixa_etaria": "$faixa_etaria"
+            },
+            "total_casos": {"$sum": "$total_casos"}
+        }},
+        {"$project": {
+            "_id": 0,
+            "mes": "$_id.mes",
+            "faixa_etaria": "$_id.faixa_etaria",
+            "total_casos": 1
+        }},
+        {"$sort": {"mes": 1, "faixa_etaria": 1}}
+    ]
+
+    cursor = await db.agg_cubo_casos.aggregate(pipeline)
+    dados = await cursor.to_list(length=None)
+    
+    # Preencher faixas etárias vazias se necessário
+    meses_nomes = {
+        1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
+        7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"
+    }
+
+    # Formatando para uso no heatmap no frontend
+    # Queremos uma lista onde cada item tem { name: "Faixa Etária", "Jan": 10, "Fev": 20, ... }
+    
+    heatmap_dict = {}
+    faixas = [
+        "00 a 04 anos", "05 a 14 anos", "15 a 29 anos", 
+        "30 a 39 anos", "40 a 59 anos", "60 a 79 anos", "80+ anos"
+    ]
+    
+    for f in faixas:
+        heatmap_dict[f] = {"faixa_etaria": f}
+        for m in range(1, 13):
+            heatmap_dict[f][meses_nomes[m]] = 0
+
+    for d in dados:
+        f = d.get("faixa_etaria")
+        m = d.get("mes")
+        c = d.get("total_casos")
+        
+        # Ignorar faixas que não estão mapeadas exatamente ou None
+        if f in heatmap_dict and m in meses_nomes:
+            heatmap_dict[f][meses_nomes[m]] += c
+
+    return list(heatmap_dict.values())
+
+@router.get("/piramide-etaria")
+async def get_piramide_etaria(doenca: str = None, ano: int = None, filtro_idades: str = None):
+    filtro = {}
+    if doenca:
+        filtro["doenca"] = doenca
+    if ano:
+        filtro["ano"] = ano
+        
+    pipeline = [
+        {"$match": filtro},
+        {"$group": {
+            "_id": {
+                "idade": "$idade",
+                "faixa_etaria": "$faixa_etaria",
+                "sexo": "$sexo"
+            },
+            "total_casos": {"$sum": "$total_casos"}
+        }}
+    ]
+    
+    cursor = await db.agg_cubo_casos.aggregate(pipeline)
+    dados_raw = await cursor.to_list(length=None)
+    
+    import re
+    
+    if filtro_idades and filtro_idades.strip() != "":
+        # Process custom age segments
+        segments = [s.strip() for s in filtro_idades.split(',') if s.strip()]
+        piramide = {s: {"faixa_etaria": s if '-' in s else f"{s} anos", "M": 0, "F": 0} for s in segments}
+        
+        for d in dados_raw:
+            idade_raw = d["_id"].get("idade")
+            if idade_raw is None: continue
+            idade = int(idade_raw)
+            sexo = d["_id"].get("sexo")
+            total = d.get("total_casos", 0)
+            
+            if sexo not in ["M", "F"]: continue
+            
+            for s in segments:
+                if '-' in s:
+                    parts = s.split('-')
+                    if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                        start, end = int(parts[0]), int(parts[1])
+                        if start <= idade <= end:
+                            if sexo == "M": piramide[s]["M"] += total
+                            else: piramide[s]["F"] -= total
+                else:
+                    idade_buscada = int(re.sub(r'\D', '', s)) if re.sub(r'\D', '', s) else -1
+                    if idade == idade_buscada:
+                        if sexo == "M": piramide[s]["M"] += total
+                        else: piramide[s]["F"] -= total
+                        
+        # Remover segmentos zerados
+        return [v for v in piramide.values() if v["M"] > 0 or v["F"] < 0]
+    
+    # Processar dados para a pirâmide padrão
+    faixas = [
+        "00 a 04 anos", "05 a 14 anos", "15 a 29 anos", 
+        "30 a 39 anos", "40 a 59 anos", "60 a 79 anos", "80+ anos"
+    ]
+    
+    piramide = {f: {"faixa_etaria": f, "M": 0, "F": 0} for f in faixas}
+    
+    for d in dados_raw:
+        faixa = d["_id"].get("faixa_etaria")
+        sexo = d["_id"].get("sexo")
+        total = d.get("total_casos", 0)
+        
+        if faixa in piramide and sexo in ["M", "F"]:
+            if sexo == "M":
+                piramide[faixa]["M"] += total
+            else:
+                piramide[faixa]["F"] -= total
+                
+    return list(piramide.values())
+
+@router.get("/vulnerabilidade")
+async def get_vulnerabilidade_ranking(doenca: str = None, ano: int = None, sexo: str = None):
     filtro_raw = {}
     if doenca:
         filtro_raw["NOME_DOENCA"] = doenca
     if sexo:
-        filtro_raw["CS_SEXO"] = sexo
+        filtro_raw["doenca"] = doenca
+    if sexo:
+        filtro_raw["sexo"] = sexo
     if ano:
-        from datetime import datetime
-        inicio = datetime(ano, 1, 1)
-        fim = datetime(ano, 12, 31, 23, 59, 59)
-        filtro_raw["DT_NOTIFIC"] = {"$gte": inicio, "$lte": fim}
+        filtro_raw["ano"] = ano
         
     pipeline = [
         {"$match": filtro_raw},
-        {"$project": {
-            "NO_FANTASIA": {
-                "$cond": [
-                    {"$in": [{"$trim": {"input": {"$ifNull": ["$NO_FANTASIA", ""]}}}, ["", "IGNORADO", "N/A"]]},
-                    "UNIDADE NÃO INFORMADA",
-                    {"$trim": {"input": "$NO_FANTASIA"}}
-                ]
-            }
-        }},
         {"$group": {
-            "_id": "$NO_FANTASIA",
-            "total_casos": {"$sum": 1}
-        }},
-        {"$sort": {"total_casos": -1}},
-        {"$limit": 10},
-        {"$project": {
-            "_id": 0,
-            "local": "$_id",
-            "total_casos": 1
+            "_id": "$hospital",
+            "total_casos": {"$sum": "$total_casos"},
+            "vulneravel_nome": {"$first": "$vulneravel_nome"},
+            "inundacao_classe": {"$first": "$inundacao_classe"}
         }}
     ]
-    cursor = await db.casos_geolocalizados.aggregate(pipeline)
-    return await cursor.to_list(length=None)
+    cursor = await db.agg_vulnerabilidade_casos.aggregate(pipeline)
+    casos_agrupados = await cursor.to_list(length=None)
+    
+    total_casos = sum(c["total_casos"] for c in casos_agrupados)
+    
+    is_waterborne = doenca in ["HEPA", "LEPTOSPIROSE"]
+    
+    area_counts = {}
+    casos_em_risco = 0
+    
+    for caso in casos_agrupados:
+        count = caso["total_casos"]
+        
+        if is_waterborne:
+            area_name = caso.get("inundacao_classe")
+            if area_name and area_name != "Desconhecida":
+                casos_em_risco += count
+                area_counts[area_name] = area_counts.get(area_name, 0) + count
+        else:
+            area_name = caso.get("vulneravel_nome")
+            if area_name and area_name != "DESCONHECIDO":
+                casos_em_risco += count
+                area_counts[area_name] = area_counts.get(area_name, 0) + count
+                
+    sorted_areas = sorted(
+        [{"area": k, "total_casos": v} for k, v in area_counts.items()],
+        key=lambda x: x["total_casos"],
+        reverse=True
+    )[:10]
+
+    return {
+        "is_waterborne": is_waterborne,
+        "total_casos": total_casos,
+        "casos_em_risco": casos_em_risco,
+        "proporcao_risco": round((casos_em_risco / total_casos * 100) if total_casos > 0 else 0, 1),
+        "ranking": sorted_areas
+    }
 
 @router.get("/dinamico")
 async def get_dados_dinamicos(

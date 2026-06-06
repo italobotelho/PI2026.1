@@ -10,7 +10,8 @@ import CorrelationScatter from '../components/CorrelationScatter';
 import ClinicalOutcomesSankey from '../components/ClinicalOutcomesSankey';
 import SurveillanceResponseChart from '../components/SurveillanceResponseChart';
 import HealthcareUnitsChart from '../components/HealthcareUnitsChart';
-import BairrosRanking from '../components/BairrosRanking';
+import DemographicHeatmap from '../components/DemographicHeatmap';
+import DemographicPyramid from '../components/DemographicPyramid';
 
 const DOENCAS = [
   { id: '', nome: 'Geral (Todas)', colorInfo: 'from-indigo-500 to-purple-500', activeClass: 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] border-indigo-500' },
@@ -162,6 +163,7 @@ export default function Home() {
               filtroSexo={filtroSexo} 
               setFiltroSexo={setFiltroSexo} 
             />
+            <DemographicPyramid doenca={doencaSelecionada} filtroAno={filtroAno} />
           </>
         )}
         
@@ -192,7 +194,10 @@ export default function Home() {
               </div>
             )}
             <DashboardMap doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <BairrosRanking doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 w-full">
+              <DemographicHeatmap doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
+              <HealthcareUnitsChart doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
+            </div>
           </>
         )}
 
@@ -200,7 +205,6 @@ export default function Home() {
           <div className="flex flex-col gap-6 w-full">
             <ClinicalOutcomesSankey doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
             <SurveillanceResponseChart doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <HealthcareUnitsChart doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
           </div>
         )}
       </div>
