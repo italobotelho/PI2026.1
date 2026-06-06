@@ -68,7 +68,7 @@ export default function DemographicPyramid({
             return (
               <p key={`item-${index}`} className="text-sm flex justify-between gap-4 py-1">
                 <span style={{ color: cor }} className="font-semibold">{nome}:</span>
-                <span className="text-slate-200">{valor.toLocaleString()} casos</span>
+                <span className="text-slate-200">{valor.toLocaleString('pt-BR')} casos</span>
               </p>
             );
           })}
@@ -80,8 +80,7 @@ export default function DemographicPyramid({
 
   const formatXAxis = (tickItem: any) => {
     const num = Math.abs(tickItem);
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
-    return num;
+    return num.toLocaleString('pt-BR');
   };
 
   return (

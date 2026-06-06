@@ -144,12 +144,13 @@ export default function TimeLagChart({
                 tick={{fontSize: 12}} 
                 orientation="right" 
                 width={80}
+                tickFormatter={(value) => value.toLocaleString('pt-BR')}
               />
               {/* Eixos invisíveis para temperatura e umidade não serem achatadas */}
               <YAxis yAxisId="temp" type="number" domain={[0, 45]} hide={true} />
               <YAxis yAxisId="humidity" type="number" domain={[0, 100]} hide={true} />
 
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(value: number) => value.toLocaleString('pt-BR')} />
               <Legend 
                 verticalAlign="top" 
                 height={36} 

@@ -62,7 +62,7 @@ export default function CorrelationScatter({
         <div className="bg-slate-900/95 border border-slate-700 p-4 rounded-xl shadow-2xl backdrop-blur-md">
           <p className="text-white font-bold text-lg mb-1 border-b border-slate-700 pb-1">Mês: {data.mes_id}</p>
           <div className="space-y-1 mt-2">
-            <p className="text-rose-400 text-sm font-semibold">Casos Registrados: <span className="text-slate-200 font-normal">{data.casos ?? 0}</span></p>
+            <p className="text-rose-400 text-sm font-semibold">Casos Registrados: <span className="text-slate-200 font-normal">{Number(data.casos ?? 0).toLocaleString('pt-BR')}</span></p>
             <p className="text-sky-400 text-sm font-semibold">Chuva Acumulada: <span className="text-slate-200 font-normal">{data.precipitacao?.toFixed(1) ?? '0.0'} mm</span></p>
             <p className="text-orange-400 text-sm font-semibold">Temp. Média: <span className="text-slate-200 font-normal">{data.temperatura?.toFixed(1) ?? '0.0'} °C</span></p>
             <p className="text-indigo-400 text-sm font-semibold">Umidade Média: <span className="text-slate-200 font-normal">{data.umidade?.toFixed(1) ?? '0.0'} %</span></p>
@@ -157,6 +157,7 @@ export default function CorrelationScatter({
                 allowDecimals={false}
                 domain={[MIN_CHUVA, MAX_CHUVA]} 
                 label={{ value: 'Precipitação Mensal (mm)', angle: -90, position: 'insideLeft', offset: 0, fill: '#94a3b8', fontSize: 13, fontWeight: 500 }}
+                tickFormatter={(value) => value.toLocaleString('pt-BR')}
               />
               <ZAxis type="number" dataKey="casos" range={[50, 3000]} name="Casos" />
               <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />

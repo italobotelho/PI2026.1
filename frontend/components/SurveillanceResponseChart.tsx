@@ -178,6 +178,7 @@ export default function SurveillanceResponseChart({
               legend: isNormalized ? 'Porcentagem (%)' : 'Número de Casos',
               legendPosition: 'middle',
               legendOffset: -65,
+              format: (value) => isNormalized ? `${value}%` : Number(value).toLocaleString('pt-BR')
             }}
             enableLabel={true}
             label={(d) => d.value > 0 ? (isNormalized ? `${d.value}%` : d.value.toLocaleString('pt-BR')) : ''}
