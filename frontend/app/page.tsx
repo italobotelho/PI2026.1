@@ -53,11 +53,12 @@ export default function Home() {
       <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r ${activeDoenca.colorInfo} opacity-[0.15] blur-[120px] rounded-full pointer-events-none transition-all duration-1000 z-0`}></div>
 
       <div className="w-full max-w-7xl mb-8 relative z-10">
-        <div className="bg-slate-900/40 backdrop-blur-2xl border border-slate-700/50 rounded-3xl p-6 md:p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
+        <div className="bg-slate-900/50 backdrop-blur-2xl border border-slate-700/50 rounded-3xl p-6 md:p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.6)] relative overflow-hidden">
+          <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${activeDoenca.colorInfo} opacity-80`}></div>
           
           {/* Top Row: Title and Filters */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="flex items-start gap-4">
+            <div className="flex items-center gap-4">
               <div>
                 <h1 className={`text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${activeDoenca.colorInfo} transition-all duration-500 tracking-tight`}>
                   SIEST
@@ -71,7 +72,7 @@ export default function Home() {
                 target="_blank" 
                 rel="noopener noreferrer"
                 title="Ver código no GitHub"
-                className="mt-2 text-slate-400 hover:text-white transition-all hover:scale-110 bg-slate-800/50 hover:bg-slate-700/80 p-2 rounded-full border border-slate-700/50 shadow-sm"
+                className="text-slate-400 hover:text-white transition-all hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.2)] bg-slate-800/80 hover:bg-slate-700 p-2.5 rounded-full border border-slate-600/50 shadow-sm ml-2"
               >
                 <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
                   <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
@@ -177,10 +178,10 @@ export default function Home() {
                       setActiveTab('geral');
                     }
                   }}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border whitespace-nowrap shadow-sm ${
+                  className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border whitespace-nowrap shadow-sm ${
                     doencaSelecionada === d.id 
-                      ? d.activeClass 
-                      : 'bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white hover:-translate-y-0.5'
+                      ? d.activeClass + ' scale-[1.03] ring-2 ring-offset-2 ring-offset-slate-900'
+                      : 'bg-slate-800/60 text-slate-400 border-slate-700/80 hover:bg-slate-700 hover:text-white hover:-translate-y-0.5'
                   }`}
                 >
                   {d.nome}
@@ -192,10 +193,10 @@ export default function Home() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap shadow-sm ${
+                  className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap shadow-sm ${
                     activeTab === tab.id
-                      ? 'bg-slate-700 text-white border border-slate-600'
-                      : 'bg-slate-800/40 text-slate-400 border border-transparent hover:text-slate-200 hover:bg-slate-800'
+                      ? 'bg-slate-700/90 text-white shadow-[0_4px_15px_rgba(0,0,0,0.5)] ring-1 ring-slate-500 scale-[1.02]'
+                      : 'bg-slate-800/40 text-slate-400 border border-transparent hover:text-slate-200 hover:bg-slate-700/50'
                   }`}
                 >
                   {tab.label}
