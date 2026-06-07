@@ -1,294 +1,114 @@
-"use client";
+import Link from 'next/link';
+import { Activity, BarChart2, Map, ShieldAlert, Zap, Layers } from 'lucide-react';
 
-import { useState, useEffect } from 'react';
-import api from '@/app/services/api';
-import DashboardMetrics from '../components/DashboardMetrics';
-import DashboardCharts from '../components/DashboardCharts';
-import DashboardMap from '../components/DashboardMap';
-import TimeLagChart from '../components/TimeLagChart';
-import CorrelationScatter from '../components/CorrelationScatter';
-import ClinicalOutcomesSankey from '../components/ClinicalOutcomesSankey';
-import SurveillanceResponseChart from '../components/SurveillanceResponseChart';
-import HealthcareUnitsChart from '../components/HealthcareUnitsChart';
-import DemographicHeatmap from '../components/DemographicHeatmap';
-import DemographicPyramid from '../components/DemographicPyramid';
-import SystemOverloadGraph from '../components/SystemOverloadGraph';
-
-const DOENCAS = [
-  { id: '', nome: 'Geral (Todas)', colorInfo: 'from-indigo-500 to-purple-500', activeClass: 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)] border-indigo-500' },
-  { id: 'DENG', nome: 'Dengue', colorInfo: 'from-rose-500 to-red-500', activeClass: 'bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] border-rose-500' },
-  { id: 'ZIKA', nome: 'Zika', colorInfo: 'from-amber-400 to-orange-500', activeClass: 'bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)] border-amber-500' },
-  { id: 'CHIK', nome: 'Chikungunya', colorInfo: 'from-fuchsia-400 to-pink-500', activeClass: 'bg-fuchsia-500 text-white shadow-[0_0_15px_rgba(217,70,239,0.5)] border-fuchsia-500' },
-  { id: 'LEPT', nome: 'Leptospirose', colorInfo: 'from-teal-400 to-cyan-500', activeClass: 'bg-teal-500 text-white shadow-[0_0_15px_rgba(20,184,166,0.5)] border-teal-500' },
-  { id: 'HEPA', nome: 'Hepatite A', colorInfo: 'from-yellow-400 to-lime-500', activeClass: 'bg-yellow-500 text-white shadow-[0_0_15px_rgba(234,179,8,0.5)] border-yellow-500' }
-];
-
-const TABS = [
-  { id: 'geral', label: 'Visão Geral' },
-  { id: 'clima', label: 'Clima & Correlação' },
-  { id: 'geo', label: 'Geo & Demografia' },
-  { id: 'capacidade', label: 'Sobrecarga do Sistema' },
-  { id: 'clinico', label: 'Inteligência Clínica' }
-];
-
-export default function Home() {
-  const [doencaSelecionada, setDoencaSelecionada] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>('geral');
-  const [filtroAno, setFiltroAno] = useState<number | null>(null);
-  const [filtroSexo, setFiltroSexo] = useState<string | null>(null);
-  const [anosDisponiveis, setAnosDisponiveis] = useState<number[]>([]);
-
-  useEffect(() => {
-    api.get('/dashboard/anos')
-      .then(res => setAnosDisponiveis(res.data || []))
-      .catch(err => console.error("Erro ao buscar anos:", err));
-  }, []);
-
-  const activeDoenca = DOENCAS.find(d => d.id === doencaSelecionada) || DOENCAS[0];
-
+export default function LandingPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center p-6 md:p-12 text-slate-100 font-sans relative overflow-hidden bg-slate-950">
-      
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black z-0"></div>
-      <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r ${activeDoenca.colorInfo} opacity-[0.15] blur-[120px] rounded-full pointer-events-none transition-all duration-1000 z-0`}></div>
-
-      <div className="w-full max-w-7xl mb-8 relative z-10">
-        <div className="bg-slate-900/50 backdrop-blur-2xl border border-slate-700/50 rounded-3xl p-6 md:p-8 flex flex-col gap-6 shadow-[0_8px_30px_rgb(0,0,0,0.6)] relative overflow-hidden">
-          <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${activeDoenca.colorInfo} opacity-80`}></div>
-          
-          {/* Top Row: Title and Filters */}
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className={`text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${activeDoenca.colorInfo} transition-all duration-500 tracking-tight`}>
-                  SIEST
-                </h1>
-                <p className="text-sm md:text-base text-slate-300 mt-2 font-medium">
-                  Sistema de Inteligência Epidemiológica e Socio-Territorial
-                </p>
-              </div>
-              <a 
-                href="https://github.com/italobotelho/PI2026.1" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                title="Ver código no GitHub"
-                className="text-slate-400 hover:text-white transition-all hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.2)] bg-slate-800/80 hover:bg-slate-700 p-2.5 rounded-full border border-slate-600/50 shadow-sm ml-2"
-              >
-                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
-                </svg>
-              </a>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-4 bg-slate-800/60 p-3 rounded-2xl border border-slate-700/50 shadow-inner">
-              <div className="flex items-center gap-3">
-                <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Ano</span>
-                <select 
-                  className="bg-slate-900 text-white border border-slate-600 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-lg transition-all hover:bg-slate-800"
-                  value={filtroAno || ''}
-                  onChange={(e) => setFiltroAno(e.target.value ? Number(e.target.value) : null)}
-                >
-                  <option value="">Todos</option>
-                  {anosDisponiveis.map(ano => (
-                    <option key={ano} value={ano}>{ano}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="hidden sm:block w-px h-8 bg-slate-600/50"></div>
-              
-              <div className="flex items-center gap-3">
-                <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Sexo</span>
-                <select 
-                  className="bg-slate-900 text-white border border-slate-600 rounded-xl px-4 py-2 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer shadow-lg transition-all hover:bg-slate-800"
-                  value={filtroSexo || ''}
-                  onChange={(e) => setFiltroSexo(e.target.value || null)}
-                >
-                  <option value="">Todos</option>
-                  <option value="M">Masculino</option>
-                  <option value="F">Feminino</option>
-                  <option value="I">Indeterm</option>
-                </select>
-              </div>
-
-              {(filtroAno || filtroSexo) && (
-                <>
-                  <div className="hidden sm:block w-px h-8 bg-slate-600/50"></div>
-                  <button 
-                    onClick={() => { setFiltroAno(null); setFiltroSexo(null); }}
-                    className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 transition-colors text-xs font-bold uppercase tracking-wider px-2"
-                  >
-                    ✕ Limpar
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Specific Data Warnings per Disease */}
-          {(() => {
-            if (!filtroAno || filtroAno < 2024 || !doencaSelecionada) return null;
-            
-            let mensagem = "";
-            let titulo = "Status dos Dados";
-
-            if (doencaSelecionada === 'DENG') {
-              titulo = "Processamento Laboratorial";
-              mensagem = `Os registros de Dengue para ${filtroAno} são inseridos rapidamente, porém dependem de encerramento laboratorial (sorologia). Os números atuais representam casos notificados que ainda podem sofrer descartes nas próximas semanas.`;
-            } else if (doencaSelecionada === 'ZIKA' || doencaSelecionada === 'CHIK') {
-              titulo = "Atraso de Consolidação";
-              const nome = doencaSelecionada === 'ZIKA' ? 'Zika' : 'Chikungunya';
-              mensagem = `Os dados de ${nome} sofrem um atraso (Data-Lag) natural no SINAN. Para o ano de ${filtroAno}, a maioria dos municípios de investigação silenciosa ainda não enviou os fechamentos, resultando em uma forte subnotificação visual.`;
-            } else if (doencaSelecionada === 'LEPT') {
-              titulo = "Inquérito Ambiental";
-              mensagem = `A confirmação de Leptospirose em ${filtroAno} depende de investigações epidemiológicas de campo demoradas. A ausência de casos reflete o período em que os municípios ainda estão realizando o bloqueio e fechamento das fichas.`;
-            } else if (doencaSelecionada === 'HEPA') {
-              titulo = "Base Congelada";
-              mensagem = `Os ciclos de coleta para Hepatite A ocorrem em blocos. O banco de dados atualmente integrado não possui as consolidações nacionais finalizadas para o ano de ${filtroAno}, explicando o sumiço dos casos na interface.`;
-            }
-
-            if (!mensagem) return null;
-
-            return (
-              <div className="mt-4 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex gap-3 items-start shadow-sm">
-                <div className="text-amber-400 mt-0.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-amber-200/90 text-xs font-medium leading-relaxed">
-                    <strong>{titulo} ({filtroAno}):</strong> {mensagem}
-                  </p>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Bottom Row: Tabs */}
-          <div className="flex flex-col gap-4 border-t border-slate-700/50 pt-6">
-            <div className="flex flex-wrap gap-2 w-full">
-              {DOENCAS.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => {
-                    setDoencaSelecionada(d.id);
-                    if (d.id === '' && activeTab === 'clima') {
-                      setActiveTab('geral');
-                    }
-                  }}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 border whitespace-nowrap shadow-sm ${
-                    doencaSelecionada === d.id 
-                      ? d.activeClass + ' scale-[1.03] ring-1 ring-offset-2 ring-offset-slate-900'
-                      : 'bg-slate-800/60 text-slate-400 border-slate-700/80 hover:bg-slate-700 hover:text-white hover:-translate-y-0.5'
-                  }`}
-                >
-                  {d.nome}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-2 w-full pt-2 border-t border-slate-800">
-              {TABS.filter(tab => !(doencaSelecionada === '' && tab.id === 'clima')).map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap shadow-sm ${
-                    activeTab === tab.id
-                      ? 'bg-slate-700/90 text-white shadow-[0_4px_15px_rgba(0,0,0,0.5)] ring-1 ring-slate-500 scale-[1.02]'
-                      : 'bg-slate-800/40 text-slate-400 border border-transparent hover:text-slate-200 hover:bg-slate-700/50'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <div className="w-full max-w-7xl relative z-10 space-y-8">
-        {activeTab === 'geral' && (
-          <>
-            <DashboardMetrics doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <DashboardCharts 
-              doenca={doencaSelecionada} 
-              filtroAno={filtroAno} 
-              filtroSexo={filtroSexo} 
-              setFiltroSexo={setFiltroSexo} 
-            />
-            {!filtroSexo && (
-              <DemographicPyramid doenca={doencaSelecionada} filtroAno={filtroAno} />
-            )}
-          </>
-        )}
+    <main className="flex flex-col min-h-[calc(100vh-64px)]">
+      {/* Hero Section */}
+      <section className="relative flex-1 flex items-center justify-center overflow-hidden py-20 lg:py-32">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/40 via-slate-950 to-black z-0"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none z-0"></div>
         
-        {activeTab === 'clima' && (
-          <>
-            <TimeLagChart doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <CorrelationScatter doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-          </>
-        )}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-sm font-semibold mb-8 backdrop-blur-sm">
+            <Activity className="h-4 w-4" />
+            <span>Monitoramento Epidemiológico em Tempo Real</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-6 max-w-4xl leading-tight">
+            Inteligência <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Epidemiológica</span> e Socio-Territorial
+          </h1>
+          
+          <p className="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl leading-relaxed">
+            O SIEST é uma plataforma avançada para visualização, previsão e análise de surtos epidemiológicos, 
+            integrando dados climáticos, geoespaciais e de capacidade hospitalar para embasar decisões de saúde pública.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <Link 
+              href="/dashboard" 
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-[0_0_20px_rgba(79,70,229,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] flex items-center justify-center gap-2"
+            >
+              <BarChart2 className="h-5 w-5" />
+              Explorar o Painel de Dados
+            </Link>
+            <Link 
+              href="/sobre" 
+              className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-4 rounded-xl font-bold text-lg border border-slate-700 transition-all flex items-center justify-center gap-2"
+            >
+              <Layers className="h-5 w-5" />
+              Entenda a Metodologia
+            </Link>
+          </div>
+        </div>
+      </section>
 
-        {activeTab === 'geo' && (
-          <>
-            {(doencaSelecionada === 'HEPA' || doencaSelecionada === 'ZIKA') && (
-              <div className="bg-amber-500/10 border border-amber-500/50 rounded-2xl p-4 flex gap-4 items-start shadow-lg mb-2">
-                <div className="text-amber-400 mt-0.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-1">Nota de Imputação de Dados</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">
-                    {doencaSelecionada === 'HEPA' 
-                      ? "Atenção: 100% dos dados de unidade de saúde para Hepatite A foram imputados e alocados no centro da cidade devido à ausência de registros geográficos precisos. A visualização no mapa representa essa alocação central e não a distribuição real."
-                      : "Atenção: 86.7% dos dados de unidade de saúde para Zika foram imputados e alocados no centro da cidade, pois não foi possível determinar a localização com precisão original. A visualização no mapa está fortemente concentrada nessa região."}
-                  </p>
-                </div>
+      {/* Features Section */}
+      <section className="bg-slate-950 py-24 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Dimensões de Análise</h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              Nossa plataforma cruza múltiplas fontes de dados para fornecer uma visão holística 
+              e acionável sobre o cenário de saúde regional.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-3xl hover:bg-slate-800/50 transition-colors group">
+              <div className="bg-indigo-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-indigo-500/20 transition-colors">
+                <BarChart2 className="h-7 w-7 text-indigo-400" />
               </div>
-            )}
-            <DashboardMap doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <div className="flex flex-col gap-8 w-full">
-              <DemographicHeatmap doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-              <HealthcareUnitsChart doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
+              <h3 className="text-xl font-bold text-white mb-3">Séries Históricas</h3>
+              <p className="text-slate-400 leading-relaxed">
+                Acompanhe a evolução de doenças como Dengue, Zika e Chikungunya ao longo do tempo, identificando picos e sazonalidades.
+              </p>
             </div>
-          </>
-        )}
 
-        {activeTab === 'capacidade' && (
-          <div className="flex flex-col gap-6 w-full">
-            {(doencaSelecionada === 'HEPA' || doencaSelecionada === 'ZIKA') && (
-              <div className="bg-amber-500/10 border border-amber-500/50 rounded-2xl p-4 flex gap-4 items-start shadow-lg">
-                <div className="text-amber-400 mt-0.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-1">Nota de Imputação de Unidade de Saúde</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">
-                    {doencaSelecionada === 'HEPA' 
-                      ? "Atenção: Os prontuários originais de Hepatite A não possuíam registros de unidade de atendimento. Para viabilizar a análise de fluxo, 100% dos dados foram imputados matematicamente para a UPA Centro. O grafo abaixo refletirá uma sobrecarga artificial massiva neste único destino."
-                      : "Atenção: 86.7% dos prontuários de Zika no SINAN apresentaram falhas no preenchimento da unidade de saúde. Estes casos órfãos foram imputados estatisticamente para a UPA Centro. Você notará um fluxo direcional desproporcional para este hospital no grafo abaixo."}
+            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-3xl hover:bg-slate-800/50 transition-colors group">
+              <div className="bg-rose-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-rose-500/20 transition-colors">
+                <Map className="h-7 w-7 text-rose-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Inteligência Geoespacial</h3>
+              <p className="text-slate-400 leading-relaxed">
+                Mapas de calor e distribuição demográfica que revelam o comportamento territorial das infecções bairro a bairro.
+              </p>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-3xl hover:bg-slate-800/50 transition-colors group">
+              <div className="bg-amber-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-amber-500/20 transition-colors">
+                <ShieldAlert className="h-7 w-7 text-amber-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Sobrecarga Hospitalar</h3>
+              <p className="text-slate-400 leading-relaxed">
+                Grafos direcionais que mostram o fluxo de pacientes e identificam unidades de saúde sob risco de colapso de atendimento.
+              </p>
+            </div>
+            
+            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-3xl hover:bg-slate-800/50 transition-colors group lg:col-span-3">
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="flex-1">
+                  <div className="bg-teal-500/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-teal-500/20 transition-colors">
+                    <Zap className="h-7 w-7 text-teal-400" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-3">Correlação Climática</h3>
+                  <p className="text-slate-400 leading-relaxed">
+                    O SIEST integra dados de precipitação e temperatura, aplicando análises de Data-Lag (defasagem de tempo) para provar a correlação estatística entre o clima e os surtos epidemiológicos, permitindo planejamento antecipado.
                   </p>
                 </div>
+                <div className="hidden md:block flex-1 bg-slate-950 rounded-2xl border border-slate-800 h-48 w-full p-4 relative overflow-hidden">
+                   {/* Decorative fake chart */}
+                   <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-teal-500/20 to-transparent"></div>
+                   <svg className="w-full h-full text-teal-500/50" preserveAspectRatio="none" viewBox="0 0 100 100">
+                     <path d="M0,100 L0,80 Q25,90 50,60 T100,30 L100,100 Z" fill="currentColor" opacity="0.3"></path>
+                     <path d="M0,80 Q25,90 50,60 T100,30" fill="none" stroke="currentColor" strokeWidth="2"></path>
+                   </svg>
+                </div>
               </div>
-            )}
-            <SystemOverloadGraph doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
+            </div>
           </div>
-        )}
-
-        {activeTab === 'clinico' && (
-          <div className="flex flex-col gap-6 w-full">
-            <ClinicalOutcomesSankey doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-            <SurveillanceResponseChart doenca={doencaSelecionada} filtroAno={filtroAno} filtroSexo={filtroSexo} />
-          </div>
-        )}
-      </div>
-
+        </div>
+      </section>
     </main>
   );
 }

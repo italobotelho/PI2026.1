@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,7 +16,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "SIEST - Inteligência Epidemiológica",
-  description: "Sistema de Inteligência Epidemiológica e Socio-Territorial",
+  description: "Sistema de Inteligência Epidemiológica e Socio-Territorial para monitoramento de saúde pública.",
+  openGraph: {
+    title: "SIEST - Portal Público",
+    description: "Monitoramento avançado e previsões de sobrecarga clínica usando dados socioterritoriais.",
+    type: "website",
+  }
 };
 
 export default function RootLayout({
@@ -23,9 +30,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-PT" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <body suppressHydrationWarning>
-        {children}
+    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body suppressHydrationWarning className="bg-slate-950 min-h-screen flex flex-col font-sans">
+        <Header />
+        <div className="flex-1">
+          {children}
+        </div>
+        <Footer />
       </body>
     </html>
   );
