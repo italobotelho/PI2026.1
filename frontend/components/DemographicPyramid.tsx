@@ -22,12 +22,13 @@ const tooltipStyle = {
   padding: '12px'
 };
 
-const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
       <div style={tooltipStyle}>
         <p className="text-white font-bold mb-2 pb-1 border-b border-slate-700">{label}</p>
-        {payload.map((entry, index) => {
+        {payload.map((entry: any, index: number) => {
           const valor = Math.abs(Number(entry.value));
           const nome = entry.dataKey === 'M' ? 'Masculino' : 'Feminino';
           const cor = entry.dataKey === 'M' ? '#0ea5e9' : '#d946ef';

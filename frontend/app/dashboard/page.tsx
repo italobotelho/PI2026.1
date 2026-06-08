@@ -205,7 +205,7 @@ export default function Home() {
               doenca={doencaSelecionada} 
               filtroAno={filtroAno} 
               filtroSexo={filtroSexo} 
-              setFiltroSexo={setFiltroSexo} 
+
             />
             {!filtroSexo && (
               <DemographicPyramid doenca={doencaSelecionada} filtroAno={filtroAno} />

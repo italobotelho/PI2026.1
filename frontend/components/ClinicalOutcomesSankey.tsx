@@ -199,6 +199,7 @@ export default function ClinicalOutcomesSankey({
             margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
             align="justify"
             sort="input"
+            // @ts-expect-error Nivo types omit color from datum but we pass it
             colors={(node: { color?: string }) => node.color || '#64748b'}
             nodeOpacity={1}
             nodeHoverOthersOpacity={0.1}

@@ -118,12 +118,12 @@ export default function DemographicHeatmap({
                       return (
                         <div 
                           key={`${row.faixa_etaria}-${mes}`}
-                          className={`flex-1 min-h-[36px] flex items-center justify-center rounded-md text-xs transition-all duration-300 hover:scale-110 hover:z-10 cursor-pointer border border-transparent hover:border-white/20 ${getCellColor(valor)}`}
+                          className={`flex-1 min-h-[36px] flex items-center justify-center rounded-md text-xs transition-all duration-300 hover:scale-110 hover:z-10 cursor-pointer border border-transparent hover:border-white/20 ${getCellColor(Number(valor))}`}
                           title={`${row.faixa_etaria} em ${mes}: ${valor} casos`}
                         >
-                          {valor > 0 ? (
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              {valor > 999 ? `${(valor/1000).toFixed(1)}k` : valor}
+                          {Number(valor) > 0 ? (
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity font-bold drop-shadow-md">
+                              {Number(valor) > 999 ? `${(Number(valor)/1000).toFixed(1)}k` : valor}
                             </span>
                           ) : null}
                         </div>
