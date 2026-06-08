@@ -40,8 +40,8 @@ export default function TimeLagChart({
         // Formatar e adicionar dados climáticos mockados se a API ainda não os trouxer
         const formatado = res.data
           .sort((a: Record<string, string | number>, b: Record<string, string | number>) => {
-            if (a.ano !== b.ano) return a.ano - b.ano;
-            return a.semana - b.semana;
+            if (a.ano !== b.ano) return Number(a.ano) - Number(b.ano);
+            return Number(a.semana) - Number(b.semana);
           })
           .map((item: Record<string, string | number>) => ({
             ...item,
@@ -164,7 +164,7 @@ export default function TimeLagChart({
               <YAxis yAxisId="temp" type="number" domain={[0, 45]} hide={true} />
               <YAxis yAxisId="humidity" type="number" domain={[0, 100]} hide={true} />
 
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(value: number) => value?.toLocaleString('pt-BR')} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(value: any) => Number(value).toLocaleString('pt-BR')} />
               <Legend 
                 verticalAlign="top" 
                 height={36} 

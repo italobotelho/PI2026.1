@@ -84,10 +84,10 @@ export default function MapComponent({
         </LayersControl.BaseLayer>
 
         {/* Camada de Polígonos: Risco de Inundação */}
-        {riscoData && (
+        {!!riscoData && (
           <LayersControl.Overlay checked name="Risco de Inundação">
             <GeoJSON 
-              data={riscoData} 
+              data={riscoData as any} 
               style={estiloRisco} 
               onEachFeature={(feature, layer) => {
                 if (feature.properties && feature.properties.CLASSE) {
@@ -99,10 +99,10 @@ export default function MapComponent({
         )}
 
         {/* Camada de Polígonos: Vulnerabilidade Habitacional */}
-        {vulnData && (
+        {!!vulnData && (
           <LayersControl.Overlay checked name="Vulnerabilidade Habitacional">
             <GeoJSON 
-              data={vulnData} 
+              data={vulnData as any} 
               style={estiloVuln}
               onEachFeature={(feature, layer) => {
                 if (feature.properties && feature.properties.NOME_AREA) {

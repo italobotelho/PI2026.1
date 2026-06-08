@@ -105,7 +105,7 @@ export default function SystemOverloadGraph({
           position: 'inside',
           color: '#ffffff',
           fontWeight: 'bold',
-          formatter: (params: Record<string, unknown>) => `${params.data.name}\n(${Number(params.data.value).toLocaleString('pt-BR')})`
+          formatter: (params: any) => `${params.data.name}\n(${Number(params.data.value).toLocaleString('pt-BR')})`
         },
         value: n.val,
         category: 0
@@ -162,7 +162,7 @@ export default function SystemOverloadGraph({
         backgroundColor: '#0f172a',
         borderColor: '#334155',
         textStyle: { color: '#f8fafc' },
-        formatter: (params: Record<string, unknown>) => {
+        formatter: (params: any) => {
           if (params.dataType === 'edge') {
             return `<div style="font-weight:bold;margin-bottom:4px;">Fluxo de Pacientes</div>
                     ${params.data.source} ➔ ${params.data.target}<br/>

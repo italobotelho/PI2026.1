@@ -157,12 +157,11 @@ export default function DemographicPyramid({
               <Legend 
                 verticalAlign="top" 
                 height={36} 
-                {...({
-                  payload: [
-                    { value: 'Feminino', type: 'circle', color: '#d946ef' },
-                    { value: 'Masculino', type: 'circle', color: '#0ea5e9' }
-                  ]
-                } as unknown as undefined)}
+                // @ts-expect-error - Rechargs Legend payload type is complex
+                payload={[
+                  { value: 'Feminino', type: 'circle', color: '#d946ef' },
+                  { value: 'Masculino', type: 'circle', color: '#0ea5e9' }
+                ]}
               />
               
               <ReferenceLine x={0} stroke="#475569" strokeWidth={2} />
