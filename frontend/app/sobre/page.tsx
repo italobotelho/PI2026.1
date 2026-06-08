@@ -1,4 +1,4 @@
-import { Info, Database, Code, Users } from 'lucide-react';
+import { Info, Database, Code } from 'lucide-react';
 
 export default function SobrePage() {
   return (

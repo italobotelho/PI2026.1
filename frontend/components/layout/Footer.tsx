@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Activity, Code, Mail, Database, AlertCircle } from 'lucide-react';
+import { Activity, Mail, Database, AlertCircle } from 'lucide-react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();

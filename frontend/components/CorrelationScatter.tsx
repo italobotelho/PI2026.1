@@ -3,8 +3,61 @@
 import { useState, useEffect } from 'react';
 import api from '@/app/services/api';
 import { 
-  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ZAxis, ResponsiveContainer, Cell, ReferenceArea, Label, ReferenceLine
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ZAxis, ResponsiveContainer, Cell, ReferenceArea, Label, ReferenceLine, TooltipProps
 } from 'recharts';
+
+const coresEstacao = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981']; 
+const nomesEstacao = ['Verão', 'Outono', 'Inverno', 'Primavera'];
+
+const getEstacao = (mes: number) => {
+  if (mes >= 12 || mes <= 2) return 0; // Verão
+  if (mes >= 3 && mes <= 5) return 1; // Outono
+  if (mes >= 6 && mes <= 8) return 2; // Inverno
+  return 3; // Primavera
+};
+
+interface ScatterApiItem {
+  mes: number;
+  ano: number;
+  precipitacao_total?: number;
+  temperatura_media?: number;
+  umidade_media?: number;
+  total_casos?: number;
+}
+
+interface ScatterData {
+  mes_id: string;
+  precipitacao: number;
+  temperatura: number;
+  umidade: number;
+  casos: number;
+  estacao: number;
+}
+
+const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const estacaoNome = nomesEstacao[data.estacao];
+    const estacaoColor = coresEstacao[data.estacao];
+
+    return (
+      <div className="bg-slate-900/95 border border-slate-700 p-4 rounded-xl shadow-2xl backdrop-blur-md">
+        <p className="text-white font-bold text-lg mb-1 border-b border-slate-700 pb-1">Mês: {data.mes_id}</p>
+        <div className="space-y-1 mt-2">
+          <p className="text-rose-400 text-sm font-semibold">Casos Registrados: <span className="text-slate-200 font-normal">{Number(data.casos ?? 0).toLocaleString('pt-BR')}</span></p>
+          <p className="text-sky-400 text-sm font-semibold">Chuva Acumulada: <span className="text-slate-200 font-normal">{data.precipitacao?.toFixed(1) ?? '0.0'} mm</span></p>
+          <p className="text-orange-400 text-sm font-semibold">Temp. Média: <span className="text-slate-200 font-normal">{data.temperatura?.toFixed(1) ?? '0.0'} °C</span></p>
+          <p className="text-indigo-400 text-sm font-semibold">Umidade Média: <span className="text-slate-200 font-normal">{data.umidade?.toFixed(1) ?? '0.0'} %</span></p>
+          <div className="mt-2 pt-2 border-t border-slate-800 flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: estacaoColor }}></span>
+            <span className="text-xs text-slate-300">{estacaoNome}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function CorrelationScatter({ 
   doenca,
@@ -15,14 +68,14 @@ export default function CorrelationScatter({
   filtroAno?: number | null;
   filtroSexo?: string | null;
 }) {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<ScatterData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/temporal', { params: { doenca, ano: filtroAno, sexo: filtroSexo } })
       .then(res => {
-        const dadosReais = res.data.map((item: any) => ({
+        const dadosReais = res.data.map((item: ScatterApiItem) => ({
           mes_id: `${String(item.mes).padStart(2, '0')}/${item.ano}`,
           precipitacao: item.precipitacao_total || 0,
           temperatura: item.temperatura_media || 0,
@@ -31,51 +84,19 @@ export default function CorrelationScatter({
           estacao: getEstacao(item.mes)
         }));
         
-        setDados(dadosReais);
-        setLoading(false);
+        if (!ignore) {
+          setDados(dadosReais);
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar dados para scatter:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
-  const getEstacao = (mes: number) => {
-    if (mes >= 12 || mes <= 2) return 0; // Verão
-    if (mes >= 3 && mes <= 5) return 1; // Outono
-    if (mes >= 6 && mes <= 8) return 2; // Inverno
-    return 3; // Primavera
-  };
-
-  const coresEstacao = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981']; 
-  const nomesEstacao = ['Verão', 'Outono', 'Inverno', 'Primavera'];
-
   const cardClass = "bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-2xl shadow-xl relative overflow-hidden";
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const estacaoNome = nomesEstacao[data.estacao];
-      const estacaoColor = coresEstacao[data.estacao];
-
-      return (
-        <div className="bg-slate-900/95 border border-slate-700 p-4 rounded-xl shadow-2xl backdrop-blur-md">
-          <p className="text-white font-bold text-lg mb-1 border-b border-slate-700 pb-1">Mês: {data.mes_id}</p>
-          <div className="space-y-1 mt-2">
-            <p className="text-rose-400 text-sm font-semibold">Casos Registrados: <span className="text-slate-200 font-normal">{Number(data.casos ?? 0).toLocaleString('pt-BR')}</span></p>
-            <p className="text-sky-400 text-sm font-semibold">Chuva Acumulada: <span className="text-slate-200 font-normal">{data.precipitacao?.toFixed(1) ?? '0.0'} mm</span></p>
-            <p className="text-orange-400 text-sm font-semibold">Temp. Média: <span className="text-slate-200 font-normal">{data.temperatura?.toFixed(1) ?? '0.0'} °C</span></p>
-            <p className="text-indigo-400 text-sm font-semibold">Umidade Média: <span className="text-slate-200 font-normal">{data.umidade?.toFixed(1) ?? '0.0'} %</span></p>
-            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: estacaoColor }}></span>
-              <span className="text-xs text-slate-300">{estacaoNome}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   // Limiares fixos para a matriz de risco
   const LIMIAR_TEMP = 22;
@@ -190,7 +211,7 @@ export default function CorrelationScatter({
               )}
 
               <Scatter name="Meses" data={dados} isAnimationActive={false} shape="circle">
-                {dados.map((entry: any, index: number) => (
+                {dados.map((entry: ScatterData, index: number) => (
                   <Cell key={`cell-${index}`} fill={coresEstacao[entry.estacao]} opacity={0.85} stroke="#0f172a" strokeWidth={1.5} />
                 ))}
               </Scatter>

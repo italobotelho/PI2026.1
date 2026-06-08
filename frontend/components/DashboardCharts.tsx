@@ -7,30 +7,54 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
 
-// New health-related color palette
-const CORES_SEXO = ['#06b6d4', '#e11d48', '#8b5cf6']; // Cyan, Rose, Violet
-const COR_BARRAS = '#f59e0b'; // Amber
-const COR_LINHA = '#e11d48'; // Rose for alerts
+interface TempoData {
+  mes: number;
+  ano: number;
+  total_casos: number;
+  data_formatada?: string;
+}
+
+interface SexoData {
+  sexo: string;
+  total_casos: number;
+  sexo_nome?: string;
+  fill?: string;
+}
+
+interface IdadeData {
+  idade: string;
+  total_casos: number;
+}
+
+interface FaixaEtariaData {
+  faixa_etaria: string;
+  total_casos: number;
+}
+
+interface DemograficoData {
+  faixa_etaria: FaixaEtariaData[];
+  idade_exata: IdadeData[];
+  sexo: SexoData[];
+  letalidade: unknown[];
+}
 
 export default function DashboardCharts({ 
   doenca, 
   filtroAno, 
-  filtroSexo, 
-  setFiltroSexo 
+  filtroSexo 
 }: { 
-  doenca: string,
-  filtroAno: number | null,
-  filtroSexo: string | null,
-  setFiltroSexo: (sex: string | null) => void
+  doenca: string;
+  filtroAno: number | null;
+  filtroSexo: string | null;
 }) {
-  const [dadosTemporais, setDadosTemporais] = useState<any[]>([]);
-  const [dadosDemograficos, setDadosDemograficos] = useState<any>(null);
+  const [dadosTemporais, setDadosTemporais] = useState<TempoData[]>([]);
+  const [dadosDemograficos, setDadosDemograficos] = useState<DemograficoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filtroIdades, setFiltroIdades] = useState<string>('');
 
   useEffect(() => {
-    setLoading(true);
-    const params: any = { doenca };
+    let ignore = false;
+    const params: Record<string, string | number> = { doenca };
     if (filtroAno) params.ano = filtroAno;
     if (filtroSexo) params.sexo = filtroSexo;
 
@@ -39,7 +63,7 @@ export default function DashboardCharts({
         const data = res.data;
         
         const temporalFormatado = (data.tempo || [])
-          .map((item: any) => ({
+          .map((item: TempoData) => ({
             ...item,
             data_formatada: `${String(item.mes).padStart(2, '0')}/${item.ano}`,
           }));
@@ -47,25 +71,28 @@ export default function DashboardCharts({
         const SEXO_MAP: Record<string, string> = { 'M': 'Masculino', 'F': 'Feminino', 'I': 'Indeterminado' };
         const SEXO_COLOR_MAP: Record<string, string> = { 'M': '#06b6d4', 'F': '#8b5cf6', 'I': '#e11d48' };
 
-        const sexoFormatado = (data.sexo || []).map((item: any) => ({
+        const sexoFormatado = (data.sexo || []).map((item: SexoData) => ({
           ...item,
           sexo_nome: SEXO_MAP[item.sexo] || item.sexo,
           fill: SEXO_COLOR_MAP[item.sexo] || '#94a3b8'
         }));
 
-        setDadosTemporais(temporalFormatado);
-        setDadosDemograficos({
-          faixa_etaria: data.faixa_etaria || [],
-          idade_exata: data.idade_exata || [],
-          sexo: sexoFormatado,
-          letalidade: data.letalidade || []
-        });
-        setLoading(false);
+        if (!ignore) {
+          setDadosTemporais(temporalFormatado);
+          setDadosDemograficos({
+            faixa_etaria: data.faixa_etaria || [],
+            idade_exata: data.idade_exata || [],
+            sexo: sexoFormatado,
+            letalidade: data.letalidade || []
+          });
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao carregar gráficos:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
   if (loading) return (
@@ -96,7 +123,7 @@ export default function DashboardCharts({
           const end = parseInt(parts[1].replace(/\D/g, ''), 10);
           if (!isNaN(start) && !isNaN(end) && start <= end) {
             let totalCasos = 0;
-            dadosDemograficos.idade_exata.forEach((item: any) => {
+            dadosDemograficos.idade_exata.forEach((item: IdadeData) => {
               const idade = parseInt(item.idade, 10);
               if (idade >= start && idade <= end) {
                 totalCasos += item.total_casos;
@@ -113,7 +140,7 @@ export default function DashboardCharts({
           const idadeBuscada = parseInt(segment.replace(/\D/g, ''), 10);
           if (!isNaN(idadeBuscada)) {
             let totalCasos = 0;
-            dadosDemograficos.idade_exata.forEach((item: any) => {
+            dadosDemograficos.idade_exata.forEach((item: IdadeData) => {
               if (parseInt(item.idade, 10) === idadeBuscada) totalCasos += item.total_casos;
             });
             if (totalCasos > 0) {
@@ -156,7 +183,7 @@ export default function DashboardCharts({
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.4} />
               <XAxis dataKey="data_formatada" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} minTickGap={30} />
               <YAxis stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(value) => value.toLocaleString('pt-BR')} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} formatter={(value: any) => value.toLocaleString('pt-BR')} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 2 }} formatter={(value: number) => value.toLocaleString('pt-BR')} />
               <Legend verticalAlign="top" height={36} />
               <Area 
                 type="monotone" 
@@ -214,7 +241,7 @@ export default function DashboardCharts({
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={true} vertical={false} />
                     <XAxis type="number" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(value) => value.toLocaleString('pt-BR')} />
                     <YAxis dataKey="faixa_etaria" type="category" stroke="#94a3b8" tick={{fontSize: 12, fill: '#94a3b8'}} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={tooltipStyle} cursor={{fill: 'rgba(255,255,255,0.05)'}} formatter={(value: any) => value?.toLocaleString('pt-BR')} />
+                    <Tooltip contentStyle={tooltipStyle} cursor={{fill: 'rgba(255,255,255,0.05)'}} formatter={(value: number) => value?.toLocaleString('pt-BR')} />
                     <Bar dataKey="total_casos" name="Casos" fill="url(#colorBar)" radius={[0, 6, 6, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -244,7 +271,7 @@ export default function DashboardCharts({
                     label={({ percent }) => `${((percent || 0) * 100).toFixed(2)}%`} 
                     stroke="none"
                   >
-                    {dadosDemograficos?.sexo?.map((entry: any, index: number) => (
+                    {dadosDemograficos?.sexo?.map((entry: SexoData, index: number) => (
                       <Cell 
                         key={`cell-${index}`} 
                         fill={entry.fill} 
@@ -255,7 +282,7 @@ export default function DashboardCharts({
                       />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} formatter={(value: any) => value?.toLocaleString('pt-BR')} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => value?.toLocaleString('pt-BR')} />
                   <Legend wrapperStyle={{ paddingTop: '20px' }} />
                 </PieChart>
               </ResponsiveContainer>

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import api from '@/app/services/api';
 
+const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 export default function DemographicHeatmap({ 
   doenca,
   filtroAno = null,
@@ -12,32 +14,33 @@ export default function DemographicHeatmap({
   filtroAno?: number | null;
   filtroSexo?: string | null;
 }) {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<Record<string, string | number>[]>([]);
   const [loading, setLoading] = useState(true);
   const [maxCasos, setMaxCasos] = useState(0);
 
-  const mesesNomes = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/demografia-sazonal', { params: { doenca, ano: filtroAno, sexo: filtroSexo } })
       .then(res => {
-        setDados(res.data);
-        
-        // Encontrar o maior valor para calcular a opacidade/escala de cor
-        let max = 0;
-        res.data.forEach((row: any) => {
-          mesesNomes.forEach(m => {
-            if (row[m] > max) max = row[m];
+        if (!ignore) {
+          setDados(res.data);
+          
+          let max = 0;
+          res.data.forEach((row: Record<string, number | string>) => {
+            mesesNomes.forEach(m => {
+              const val = row[m];
+              if (typeof val === 'number' && val > max) max = val;
+            });
           });
-        });
-        setMaxCasos(max);
-        setLoading(false);
+          setMaxCasos(max);
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar dados do heatmap:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
   const cardClass = "bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-2xl shadow-xl relative overflow-hidden flex flex-col w-full";

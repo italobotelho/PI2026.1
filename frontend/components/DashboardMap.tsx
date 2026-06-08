@@ -23,7 +23,7 @@ export default function DashboardMap({
   filtroSexo?: string | null;
 }) {
   const [filtroEvolucao, setFiltroEvolucao] = useState<string | null>(null);
-  const [filtroHospitalizado, setFiltroHospitalizado] = useState<string | null>(null);
+  const [filtroHospitalizado] = useState<string | null>(null);
 
   return (
     <div className="w-full mb-16">

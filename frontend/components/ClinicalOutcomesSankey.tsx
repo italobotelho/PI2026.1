@@ -4,6 +4,13 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '@/app/services/api';
 import { ResponsiveSankey } from '@nivo/sankey';
 
+interface DesfechoData {
+  classificacao?: string | number;
+  hospitalizacao?: string | number;
+  evolucao?: string | number;
+  total: number;
+}
+
 export default function ClinicalOutcomesSankey({ 
   doenca,
   filtroAno = null,
@@ -13,21 +20,24 @@ export default function ClinicalOutcomesSankey({
   filtroAno?: number | null;
   filtroSexo?: string | null;
 }) {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<DesfechoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [ocultarSemInfo, setOcultarSemInfo] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/desfechos', { params: { doenca, ano: filtroAno, sexo: filtroSexo } })
       .then(res => {
-        setDados(res.data || []);
-        setLoading(false);
+        if (!ignore) {
+          setDados(res.data || []);
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar dados de desfechos:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
   // Processamento para o Sankey
@@ -83,7 +93,7 @@ export default function ClinicalOutcomesSankey({
 
     // Construir Nodes únicos e Links
     const uniqueNodes = new Set<string>();
-    const finalLinks: any[] = [];
+    const finalLinks: { source: string; target: string; value: number }[] = [];
 
     let totalConfirmados = 0;
     let totalInternados = 0;
@@ -189,7 +199,7 @@ export default function ClinicalOutcomesSankey({
             margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
             align="justify"
             sort="input"
-            colors={(node: any) => node.color}
+            colors={(node: { color?: string }) => node.color || '#64748b'}
             nodeOpacity={1}
             nodeHoverOthersOpacity={0.1}
             nodeThickness={14}

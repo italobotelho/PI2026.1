@@ -4,6 +4,12 @@ import { useState, useEffect, useMemo } from 'react';
 import api from '@/app/services/api';
 import { ResponsiveBar } from '@nivo/bar';
 
+interface TempoRespostaData {
+  bucket: string;
+  criterio: number | string;
+  total: number;
+}
+
 export default function SurveillanceResponseChart({ 
   doenca,
   filtroAno = null,
@@ -13,28 +19,31 @@ export default function SurveillanceResponseChart({
   filtroAno?: number | null;
   filtroSexo?: string | null;
 }) {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<TempoRespostaData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNormalized, setIsNormalized] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/tempo-resposta', { params: { doenca, ano: filtroAno, sexo: filtroSexo } })
       .then(res => {
-        setDados(res.data || []);
-        setLoading(false);
+        if (!ignore) {
+          setDados(res.data || []);
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar dados de tempo de resposta:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
-  const { chartData, totalCasos } = useMemo(() => {
-    if (!dados || dados.length === 0) return { chartData: [], totalCasos: 0 };
+  const { chartData } = useMemo(() => {
+    if (!dados || dados.length === 0) return { chartData: [] };
 
     // bucket -> { bucket, 'Laboratorial', 'Clínico-Epidem.', 'Sem Info' }
-    const agg: Record<string, any> = {};
+    const agg: Record<string, Record<string, string | number>> = {};
     const bucketsOrder = [
       '0-2 dias (Rápido)',
       '3-7 dias (Alerta)',
@@ -46,8 +55,6 @@ export default function SurveillanceResponseChart({
       agg[b] = { bucket: b, 'Laboratorial': 0, 'Clínico-Epidem.': 0, 'Sem Info': 0 };
     });
 
-    let total = 0;
-
     dados.forEach(r => {
       const b = r.bucket;
       let c = 'Sem Info';
@@ -55,8 +62,7 @@ export default function SurveillanceResponseChart({
       else if (String(r.criterio) === '2') c = 'Clínico-Epidem.';
 
       if (agg[b]) {
-        agg[b][c] += r.total;
-        total += r.total;
+        (agg[b][c] as number) += r.total;
       }
     });
 
@@ -64,19 +70,22 @@ export default function SurveillanceResponseChart({
     
     // Normalização (100% Stacked)
     if (isNormalized) {
-      formattedData = formattedData.map((d: any) => {
-        const rowTotal = d['Laboratorial'] + d['Clínico-Epidem.'] + d['Sem Info'];
+      formattedData = formattedData.map((d: Record<string, string | number>) => {
+        const dLab = d['Laboratorial'] as number;
+        const dClin = d['Clínico-Epidem.'] as number;
+        const dSem = d['Sem Info'] as number;
+        const rowTotal = dLab + dClin + dSem;
         if (rowTotal === 0) return d;
         return {
           bucket: d.bucket,
-          'Laboratorial': Number(((d['Laboratorial'] / rowTotal) * 100).toFixed(1)),
-          'Clínico-Epidem.': Number(((d['Clínico-Epidem.'] / rowTotal) * 100).toFixed(1)),
-          'Sem Info': Number(((d['Sem Info'] / rowTotal) * 100).toFixed(1))
+          'Laboratorial': Number(((dLab / rowTotal) * 100).toFixed(1)),
+          'Clínico-Epidem.': Number(((dClin / rowTotal) * 100).toFixed(1)),
+          'Sem Info': Number(((dSem / rowTotal) * 100).toFixed(1))
         };
       });
     }
 
-    return { chartData: formattedData, totalCasos: total };
+    return { chartData: formattedData };
   }, [dados, isNormalized]);
 
   const cardClass = "bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 p-6 md:p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden w-full flex flex-col transition-all min-h-[450px]";
@@ -127,7 +136,7 @@ export default function SurveillanceResponseChart({
                 </svg>
                 <p className="text-slate-400 font-medium">Cálculo de Atraso Indisponível</p>
                 <p className="text-sm text-slate-500 max-w-md">
-                  Os prontuários do SINAN para <strong>Hepatite A</strong> em nossa base não possuem o campo "Data dos Primeiros Sintomas" preenchido sistematicamente, o que torna impossível calcular matematicamente o tempo de resposta da vigilância para esta doença.
+                  Os prontuários do SINAN para <strong>Hepatite A</strong> em nossa base não possuem o campo &quot;Data dos Primeiros Sintomas&quot; preenchido sistematicamente, o que torna impossível calcular matematicamente o tempo de resposta da vigilância para esta doença.
                 </p>
               </>
             ) : (

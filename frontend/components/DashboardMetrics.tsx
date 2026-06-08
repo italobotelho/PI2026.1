@@ -22,20 +22,23 @@ export default function DashboardMetrics({ doenca, filtroAno, filtroSexo }: { do
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    const params: any = { doenca };
+    let ignore = false;
+    const params: Record<string, string | number> = { doenca };
     if (filtroAno) params.ano = filtroAno;
     if (filtroSexo) params.sexo = filtroSexo;
     
     api.get('/dashboard/resumo', { params })
       .then(response => {
-        setDados(response.data);
-        setLoading(false);
+        if (!ignore) {
+          setDados(response.data);
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar resumo:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
   if (loading) return (

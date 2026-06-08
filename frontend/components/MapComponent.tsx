@@ -1,31 +1,35 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
-import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, CircleMarker, Tooltip, Polyline } from 'react-leaflet';
+import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, GeoJSON, LayersControl, LayerGroup, CircleMarker, Tooltip, ZoomControl } from 'react-leaflet';
 import api from '@/app/services/api';
 
 // Coordenadas centrais de Campinas
 const CENTRO_CAMPINAS: [number, number] = [-22.9056, -47.0608];
+
+interface HospitalData {
+  latitude: number;
+  longitude: number;
+  hospital: string;
+  total_casos?: number;
+}
 
 export default function MapComponent({ 
   doenca,
   filtroAno = null,
   filtroSexo = null,
   filtroEvolucao = null,
-  filtroHospitalizado = null,
-  modoGrafo = 'nenhum'
+  filtroHospitalizado = null
 }: { 
   doenca?: string;
   filtroAno?: number | null;
   filtroSexo?: string | null;
   filtroEvolucao?: string | null;
   filtroHospitalizado?: string | null;
-  modoGrafo?: 'nenhum' | 'doenca' | 'faixa_etaria';
 }) {
-  const [riscoData, setRiscoData] = useState<any>(null);
-  const [vulnData, setVulnData] = useState<any>(null);
-  const [hospitaisData, setHospitaisData] = useState<any[]>([]);
-  const [grafoData, setGrafoData] = useState<{nodes: any[], links: any[]}>({ nodes: [], links: [] });
+  const [riscoData, setRiscoData] = useState<unknown | null>(null);
+  const [vulnData, setVulnData] = useState<unknown | null>(null);
+  const [hospitaisData, setHospitaisData] = useState<HospitalData[]>([]);
 
   useEffect(() => {
     // Busca os polígonos que curámos no MongoDB (apenas na montagem)

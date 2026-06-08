@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import api from '@/app/services/api';
-import { ResponsiveBar } from '@nivo/bar';
+import { ResponsiveBar, BarDatum } from '@nivo/bar';
+
+interface UnidadeCarga extends BarDatum {
+  id: string;
+  casos: number;
+  internacoes: number;
+  obitos: number;
+  severidade: number;
+}
 
 export default function HealthcareUnitsChart({ 
   doenca,
@@ -13,21 +21,23 @@ export default function HealthcareUnitsChart({
   filtroAno?: number | null;
   filtroSexo?: string | null;
 }) {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<UnidadeCarga[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/unidades-carga', { params: { doenca, ano: filtroAno, sexo: filtroSexo } })
       .then(res => {
-        // Reverter a ordem para o gráfico de barras horizontais (o Nivo renderiza de baixo para cima)
-        setDados(res.data.reverse());
-        setLoading(false);
+        if (!ignore) {
+          setDados(res.data.reverse());
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar dados de unidades de saúde:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
   // Encontra a severidade máxima para normalizar a escala de cores
@@ -41,7 +51,7 @@ export default function HealthcareUnitsChart({
   }, [dados]);
 
   // Função para calcular a cor com base na severidade (Vibrant HSL interpolation)
-  const getColorForSeverity = (bar: any) => {
+  const getColorForSeverity = (bar: { data: UnidadeCarga }) => {
     const sev = bar.data.severidade;
     // ratio de 0 a 1
     const ratio = Math.min(sev / maxSeveridade, 1);

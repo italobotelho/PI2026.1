@@ -1,10 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/app/services/api';
 import { 
   ComposedChart, Line, Bar, Brush, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
+
+interface TemporalData {
+  ano: number;
+  semana: number;
+  data_formatada: string;
+  precipitacao: number;
+  temperatura: number;
+  umidade: number;
+  total_casos?: number;
+  [key: string]: unknown;
+}
 
 export default function TimeLagChart({ 
   doenca, 
@@ -15,7 +26,7 @@ export default function TimeLagChart({
   filtroAno?: number | null;
   filtroSexo?: string | null;
 }) {
-  const [dados, setDados] = useState<any[]>([]);
+  const [dados, setDados] = useState<TemporalData[]>([]);
   const [lagSemanas, setLagSemanas] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -23,16 +34,16 @@ export default function TimeLagChart({
   const isDoencaHidrica = ['HEPA', 'LEPT'].includes(doenca);
 
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/temporal', { params: { doenca, granularidade: 'semana', ano: filtroAno, sexo: filtroSexo } })
       .then(res => {
         // Formatar e adicionar dados climáticos mockados se a API ainda não os trouxer
         const formatado = res.data
-          .sort((a: any, b: any) => {
+          .sort((a: Record<string, string | number>, b: Record<string, string | number>) => {
             if (a.ano !== b.ano) return a.ano - b.ano;
             return a.semana - b.semana;
           })
-          .map((item: any) => ({
+          .map((item: Record<string, string | number>) => ({
             ...item,
             data_formatada: `SE ${String(item.semana).padStart(2, '0')}/${item.ano}`,
             // Usar os dados reais vindos da agregação, convertendo para número para o Recharts não cortar os eixos
@@ -41,18 +52,21 @@ export default function TimeLagChart({
             umidade: Number(item.umidade_media) || 0,
           }));
         
-        setDados(formatado);
-        setLoading(false);
+        if (!ignore) {
+          setDados(formatado);
+          setLoading(false);
+        }
       })
       .catch(error => {
         console.error("Erro ao buscar dados temporais:", error);
-        setLoading(false);
+        if (!ignore) setLoading(false);
       });
+      return () => { ignore = true; };
   }, [doenca, filtroAno, filtroSexo]);
 
   // Função para calcular o lag sob demanda para o gráfico (evita recriar o array de dados)
   // Isso garante que o Brush NUNCA resete, pois a prop data={dados} nunca muda a referência de memória!
-  const getCasosDeslocados = (item: any) => {
+  const getCasosDeslocados = (item: TemporalData) => {
     const index = dados.indexOf(item);
     if (index === -1) return 0;
     
@@ -150,7 +164,7 @@ export default function TimeLagChart({
               <YAxis yAxisId="temp" type="number" domain={[0, 45]} hide={true} />
               <YAxis yAxisId="humidity" type="number" domain={[0, 100]} hide={true} />
 
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(value: any) => value?.toLocaleString('pt-BR')} />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(255,255,255,0.05)' }} formatter={(value: number) => value?.toLocaleString('pt-BR')} />
               <Legend 
                 verticalAlign="top" 
                 height={36} 

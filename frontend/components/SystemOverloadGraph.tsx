@@ -4,6 +4,24 @@ import { useState, useEffect, useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import api from '@/app/services/api';
 
+interface GraphNode {
+  id: string;
+  name: string;
+  group: string;
+  val: number;
+}
+
+interface GraphLink {
+  source: string;
+  target: string;
+  value: number;
+}
+
+interface GraphData {
+  nodes: GraphNode[];
+  links: GraphLink[];
+}
+
 export default function SystemOverloadGraph({ 
   doenca,
   filtroAno = null,
@@ -13,13 +31,13 @@ export default function SystemOverloadGraph({
   filtroAno?: number | null, 
   filtroSexo?: string | null 
 }) {
-  const [dados, setDados] = useState<any>(null);
+  const [dados, setDados] = useState<GraphData | null>(null);
   const [modoOrigem, setModoOrigem] = useState<'doenca' | 'faixa_etaria'>('doenca');
   const [maxTargets, setMaxTargets] = useState<number>(20); // Valor padrão: 20
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
+    let ignore = false;
     api.get('/dashboard/grafo-sobrecarga', {
       params: {
         modo_origem: modoOrigem,
@@ -28,9 +46,14 @@ export default function SystemOverloadGraph({
         sexo: filtroSexo
       }
     })
-      .then(res => setDados(res.data))
+      .then(res => {
+        if (!ignore) setDados(res.data);
+      })
       .catch(err => console.error(err))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+      return () => { ignore = true; };
   }, [modoOrigem, doenca, filtroAno, filtroSexo]);
 
   const option = useMemo(() => {
@@ -38,32 +61,31 @@ export default function SystemOverloadGraph({
       return {};
     }
 
-    let sources = dados.nodes.filter((n: any) => n.group === 'source').sort((a: any, b: any) => b.val - a.val);
-    let targets = dados.nodes.filter((n: any) => n.group === 'target').sort((a: any, b: any) => b.val - a.val);
+    let sources = dados.nodes.filter((n: GraphNode) => n.group === 'source').sort((a: GraphNode, b: GraphNode) => b.val - a.val);
+    let targets = dados.nodes.filter((n: GraphNode) => n.group === 'target').sort((a: GraphNode, b: GraphNode) => b.val - a.val);
 
     // Filtrar Top Hospitais com base no input do usuário
     if (targets.length > maxTargets && maxTargets > 0) {
       targets = targets.slice(0, maxTargets);
     }
     
-    const validTargets = new Set(targets.map((t: any) => t.id));
-    const validLinks = dados.links.filter((l: any) => validTargets.has(l.target));
-    const validSources = new Set(validLinks.map((l: any) => l.source));
-    sources = sources.filter((s: any) => validSources.has(s.id));
+    const validTargets = new Set(targets.map((t: GraphNode) => t.id));
+    const validLinks = dados.links.filter((l: GraphLink) => validTargets.has(l.target));
+    const validSources = new Set(validLinks.map((l: GraphLink) => l.source));
+    sources = sources.filter((s: GraphNode) => validSources.has(s.id));
 
     // Determinar min/max para normalização
     const allVals = [...sources, ...targets].map(n => n.val);
     const maxVal = Math.max(...allVals, 1);
-    const minVal = Math.min(...allVals, 0);
 
     // Posicionamento Radial (Origens no Centro, Destinos em um Círculo Externo)
-    const eNodes: any[] = [];
+    const eNodes: Record<string, unknown>[] = [];
     
     // Distribuir origens no Centro
     // Se for apenas 1 origem (muito comum em Doença), fica exatamente no (0,0)
     // Se forem várias, formam um círculo interno pequeno
     const innerRadius = sources.length === 1 ? 0 : 200;
-    sources.forEach((n: any, idx: number) => {
+    sources.forEach((n: GraphNode, idx: number) => {
       const angle = (idx / sources.length) * 2 * Math.PI;
       eNodes.push({
         id: n.id,
@@ -83,7 +105,7 @@ export default function SystemOverloadGraph({
           position: 'inside',
           color: '#ffffff',
           fontWeight: 'bold',
-          formatter: (params: any) => `${params.data.name}\n(${Number(params.data.value).toLocaleString('pt-BR')})`
+          formatter: (params: Record<string, unknown>) => `${params.data.name}\n(${Number(params.data.value).toLocaleString('pt-BR')})`
         },
         value: n.val,
         category: 0
@@ -92,7 +114,7 @@ export default function SystemOverloadGraph({
 
     // Distribuir destinos (Hospitais) em um grande Círculo Externo
     const outerRadius = 800; // Raio grande para espalhar bem as dezenas de hospitais
-    targets.forEach((n: any, idx: number) => {
+    targets.forEach((n: GraphNode, idx: number) => {
       // Começamos o ângulo deslocado para não ficar reto
       const angle = (idx / targets.length) * 2 * Math.PI - Math.PI / 2;
       eNodes.push({
@@ -120,8 +142,8 @@ export default function SystemOverloadGraph({
     });
 
     // Processar Links com Curvas Suaves
-    const maxLinkVal = Math.max(...validLinks.map((l: any) => l.value), 1);
-    const eLinks = validLinks.map((l: any) => ({
+    const maxLinkVal = Math.max(...validLinks.map((l: GraphLink) => l.value), 1);
+    const eLinks = validLinks.map((l: GraphLink) => ({
       source: l.source,
       target: l.target,
       value: l.value,
@@ -140,7 +162,7 @@ export default function SystemOverloadGraph({
         backgroundColor: '#0f172a',
         borderColor: '#334155',
         textStyle: { color: '#f8fafc' },
-        formatter: (params: any) => {
+        formatter: (params: Record<string, unknown>) => {
           if (params.dataType === 'edge') {
             return `<div style="font-weight:bold;margin-bottom:4px;">Fluxo de Pacientes</div>
                     ${params.data.source} ➔ ${params.data.target}<br/>

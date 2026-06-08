@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, Code, Menu, X, BarChart2, Info, Home } from 'lucide-react';
+import { Activity, Menu, X, BarChart2, Info, Home } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Header() {
